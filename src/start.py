@@ -1,6 +1,6 @@
 from dotenv import dotenv_values
 from os import path
-from database import Database
+from db_api.database import Database
 
 __env_path = path.join(path.dirname(__file__), ".env")
 config = dotenv_values(__env_path)
