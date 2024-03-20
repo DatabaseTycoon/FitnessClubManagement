@@ -9,7 +9,7 @@ config = dotenv_values(__env_path)
 def main(db: Database):
 
     res = db.select(["*"], "members", select_options={
-        "WHERE": {"operation": ">", "rowA": "memberid", "rowB": "3"}
+        "WHERE": {"operation": "<=", "rowA": "memberid", "rowB": "2"}
     })
 
     print(res)

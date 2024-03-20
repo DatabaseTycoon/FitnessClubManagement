@@ -2,19 +2,20 @@ import psycopg
 import psycopg.sql as sql
 
 class _WhereHelper():
-    def __init__(self, exists: bool, operator: str="", rA: str="", rB: str="") -> None:
+    def __init__(self, exists: bool, column_names: 'list[str]', operator: str="", rA: str="", rB: str="") -> None:
         self.has_where = exists
         if not operator in [">", "<", ">=", "<=", "=", ""]:
             raise ValueError("Where operator is not valid: " + operator)
         self.op = operator
+
         if rA != "":
-            self.is_row_A_Literal = rA.isnumeric()
+            self.is_row_A_Literal = rA.isnumeric() or rA not in column_names
         if rB != "":
-            self.is_row_B_Literal = rB.isnumeric()
+            self.is_row_B_Literal = rB.isnumeric() or rB not in column_names
 
 
 class _OrderByHelper():
-    def __init__(self, exists: bool, ASC: bool=None, rA: str="") -> None:
+    def __init__(self, exists: bool, ASC: bool=None) -> None:
         self.has_order_by = exists
         self.asc = "ASC" if ASC else "DESC"
 
@@ -25,19 +26,27 @@ class Database():
             self.__connection = psycopg.connect(
                 f"dbname={db_name} user={user_name} password={password} port={port}"
             )
+            self.__row_cache = {}
 
         except psycopg.OperationalError as e:
             print(e)
             exit(1)
+    
+    def __add_cache(self, table: str):
+        q = sql.SQL("SELECT * FROM {tbl} LIMIT 0").format(tbl=sql.Identifier(table))
+        with self.__connection.cursor() as cursor:
+            cursor.execute(q)
+            self.__row_cache.update({table : [desc[0] for desc in cursor.description]})
 
 
     def __form_sel_querry(self,
                           main: bool,
+                          table: str,
                           select_all: bool=False,
                           has_limit: bool=False, 
                           has_offset: bool=False, 
-                          where_helper: _WhereHelper=_WhereHelper(False), 
-                          order_helper: _OrderByHelper=_OrderByHelper(False), 
+                          where_helper: _WhereHelper=_WhereHelper(False, []), 
+                          order_helper: _OrderByHelper=_OrderByHelper(False, []), 
                           has_union: bool=False, union_op: dict={}) -> sql.SQL:
         
         suff = "main_" if main else "side_"
@@ -70,7 +79,7 @@ class Database():
                 has_limit=bool(union_op.get("LIMIT", False)),
                 has_offset=bool(union_op.get("OFFSET", False)),
                 order_helper=_OrderByHelper(bool(union_op.get("LIMIT", False)), union_op.get("LIMIT", False)),
-                where_helper=_WhereHelper(bool(union_op.get("WHERE", False)), union_op.get("WHERE")["operation"], union_op.get("WHERE")["rowA"], union_op.get("WHERE")["rowB"])
+                where_helper=_WhereHelper(bool(union_op.get("WHERE", False)), self.__row_cache[table], union_op.get("WHERE")["operation"], union_op.get("WHERE")["rowA"], union_op.get("WHERE")["rowB"])
             )
             union = sql.SQL(f" {{{union_sel}}} ")
         else:
@@ -116,11 +125,16 @@ class Database():
         offset = select_options.get("OFFSET", "")
         order_by = select_options.get("ORDER_BY", {"rowA": "", "asc": ""})
 
-        w_helper = _WhereHelper(bool(select_options.get("WHERE", False)), where["operation"], where["rowA"], where["rowB"])
+        # Update Cache
+        if tbl not in self.__row_cache:
+            self.__add_cache(tbl)
+
+        w_helper = _WhereHelper(bool(select_options.get("WHERE", False)), self.__row_cache[tbl], where["operation"], where["rowA"], where["rowB"])
         o_helper = _OrderByHelper(bool(select_options.get("ORDER_BY", False)), order_by["asc"])
 
         querry = self.__form_sel_querry(
             main            =   True,
+            table           =   tbl,
             select_all      =   select_all_rows,
             has_limit       =   bool(select_options.get("LIMIT", False)),
             has_offset      =   bool(select_options.get("OFFSET", False)),
