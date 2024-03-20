@@ -1,4 +1,22 @@
 import psycopg
+import psycopg.sql as sql
+
+class _WhereHelper():
+    def __init__(self, exists: bool, operator: str="", rA: str="", rB: str="") -> None:
+        self.has_where = exists
+        if not operator in [">", "<", ">=", "<=", "=", ""]:
+            raise ValueError("Where operator is not valid: " + operator)
+        self.op = operator
+        if rA != "":
+            self.is_row_A_Literal = rA.isnumeric()
+        if rB != "":
+            self.is_row_B_Literal = rB.isnumeric()
+
+
+class _OrderByHelper():
+    def __init__(self, exists: bool, ASC: bool=None, rA: str="") -> None:
+        self.has_order_by = exists
+        self.asc = "ASC" if ASC else "DESC"
 
 class Database():
 
@@ -13,51 +31,53 @@ class Database():
             exit(1)
 
 
-    def __form_sel_querry(main: bool,
+    def __form_sel_querry(self,
+                          main: bool,
+                          select_all: bool=False,
                           has_limit: bool=False, 
                           has_offset: bool=False, 
-                          has_where: bool=False, 
-                          has_order_by: bool=False, 
-                          has_union: bool=False, union_op: dict={}):
+                          where_helper: _WhereHelper=_WhereHelper(False), 
+                          order_helper: _OrderByHelper=_OrderByHelper(False), 
+                          has_union: bool=False, union_op: dict={}) -> sql.SQL:
         
         suff = "main_" if main else "side_"
         ## Where
-        if has_where:
-            where = f" WHERE %{{{suff}where_rowA}}s %{{{suff}where_op}}s %{{{suff}where_rowB}}s " 
+        if where_helper.has_where:
+            where = sql.SQL(f" WHERE {{{suff}where_rowA}} {where_helper.op} {{{suff}where_rowB}} ")
         else:
-            where = ""
+            where = sql.SQL("")
         
         ## ORDER BY
-        if has_order_by:
-            order_by = f" ORDER BY %{{{suff}order_by_rowA}}s %{{{suff}order_by_asc}}s "
+        if order_helper.has_order_by: #TODO Identifier use here
+            order_by = sql.SQL(f" ORDER BY {{{suff}order_by_rowA}} {order_helper.asc}")
 
-            if has_limit:
-                limit = f" LIMIT %{{{suff}limit_num}}s "
+            if has_limit: #TODO use sql.Literal
+                limit = sql.SQL(f" LIMIT {{{suff}limit_num}} ")
             else:
                 limit = ""
 
-            if has_offset:
-                offset = f" OFFSET %{{{suff}offset_num}}s "
+            if has_offset: #TODO use sql.Literal
+                offset = sql.SQL(f" OFFSET {{{suff}offset_num}} ")
         else:
-            order_by = ""
-            limit = ""
-            offset = ""
+            order_by = sql.SQL("")
+            limit = sql.SQL("")
+            offset = sql.SQL("")
 
         # UNION
         if has_union:
-            union_sel = Database.__form_sel_querry(
+            union_sel = self.__form_sel_querry(
                 main=False,
                 has_limit=bool(union_op.get("LIMIT", False)),
                 has_offset=bool(union_op.get("OFFSET", False)),
-                has_order_by=bool(union_op.get("LIMIT", False)),
-                has_where=bool(union_op.get("WHERE", False))
+                order_helper=_OrderByHelper(bool(union_op.get("LIMIT", False)), union_op.get("LIMIT", False)),
+                where_helper=_WhereHelper(bool(union_op.get("WHERE", False)), union_op.get("WHERE")["operation"], union_op.get("WHERE")["rowA"], union_op.get("WHERE")["rowB"])
             )
-            union = f" {{{union_sel}}} "
+            union = sql.SQL(f" {{{union_sel}}} ")
         else:
-            union = ""
+            union = sql.SQL("")
         
-
-        return f"SELECT %{{{suff}rows}}s FROM %{{{suff}table}}" + where + union + order_by + limit + offset
+        rows = f'{{{suff}rows}}' if not select_all else '*'
+        return sql.SQL((sql.SQL(f"SELECT {rows} FROM {{{suff}table}}") + where + union + order_by + limit + offset).as_string(self.__connection))
     
 
     def select(self, rows: 'list[str]', tbl: str, select_options: dict):
@@ -85,22 +105,41 @@ class Database():
         # Validate Params
         if type(rows) != list:
             raise TypeError(f"{rows}: not a list")
+        elif len(rows) == 0:
+            raise TypeError(f"{rows}: cannot be empty")
+        
+        select_all_rows = rows[0] == "*"
         
         where = select_options.get("WHERE", {"rowA": "", "rowB": "", "operation": ""})
         union = select_options.get("UNION", tuple())
         limit = select_options.get("LIMIT", "")
         offset = select_options.get("OFFSET", "")
-        order_by = select_options.get("ORDER_BY", {})
+        order_by = select_options.get("ORDER_BY", {"rowA": "", "asc": ""})
 
-        querry_string = Database.__form_sel_querry(
-            main=True,
-            has_limit=bool(select_options.get("LIMIT", False)),
-            has_offset=bool(select_options.get("OFFSET", False)),
-            has_order_by=bool(select_options.get("LIMIT", False)),
-            has_where=bool(select_options.get("WHERE", False)),
-            has_union=bool(select_options.get("UNION", False)),
-            union_op=select_options.get("UNION", dict())
+        w_helper = _WhereHelper(bool(select_options.get("WHERE", False)), where["operation"], where["rowA"], where["rowB"])
+        o_helper = _OrderByHelper(bool(select_options.get("ORDER_BY", False)), order_by["asc"])
+
+        querry = self.__form_sel_querry(
+            main            =   True,
+            select_all      =   select_all_rows,
+            has_limit       =   bool(select_options.get("LIMIT", False)),
+            has_offset      =   bool(select_options.get("OFFSET", False)),
+            order_helper    =   o_helper,
+            where_helper    =   w_helper,
+            has_union       =   bool(select_options.get("UNION", False)),
+            union_op        =   select_options.get("UNION", dict())
         )
+
+        querry = querry.format(
+            main_rows           =   sql.SQL(",").join([sql.Identifier(r) for r in rows]),
+            main_table          =   sql.Identifier(tbl),
+            main_where_rowA     =   sql.Literal(where["rowA"]) if w_helper.is_row_A_Literal else sql.Identifier(where["rowA"]),
+            main_where_rowB     =   sql.Literal(where["rowB"]) if w_helper.is_row_B_Literal else sql.Identifier(where["rowB"]),
+            main_order_by_rowA  =   sql.Identifier(order_by["rowA"]),
+            main_limit_num      =   sql.Literal(limit),
+            main_offset_num     =   sql.Literal(offset)
+        )
+
 
         if union:
             union_rows = ",".join(union[0]) if len(union[0]) > 1 else union[0][0]
@@ -110,50 +149,26 @@ class Database():
             u_where = union_op.get("WHERE", {"rowA": "", "rowB": "", "operation": ""})
             u_limit = union_op.get("LIMIT", "")
             u_offset = union_op.get("OFFSET", "")
-            u_order_by = union_op.get("ORDER_BY", {})
+            u_order_by = union_op.get("ORDER_BY", {"rowA": "", "asc": ""})
+
+            querry = querry.format(
+                side_rows           =   sql.SQL(",").join([sql.Identifier(r) for r in union_rows]),
+                side_table          =   sql.Identifier(union_table),
+                side_where_rowA     =   sql.Identifier(u_where["rowA"]),
+                side_where_rowB     =   sql.Identifier(u_where["rowB"]),
+                side_order_by_rowA  =   sql.Identifier(u_order_by["rowA"]),
+                side_limit_num      =   sql.Literal(u_limit),
+                side_offset_num     =   sql.Literal(u_offset)
+            )
 
 
             with self.__connection.cursor() as cursor:
-                cursor.execute(querry_string, {
-                    "main_rows": ",".join(rows) if len(rows) > 1 else rows[0],
-                    "main_table": tbl,
-                    "side_rows": union_rows,
-                    "side_table": union_table,
-                    "main_where_rowA": where["rowA"],
-                    "main_where_rowB": where["rowB"],
-                    "main_where_op": where["operation"],
-                    "side_where_rowA": u_where["rowA"],
-                    "side_where_rowB": u_where["rowB"],
-                    "side_where_op": u_where["operation"],
-                    "main_order_by_rowA": order_by["rowA"],
-                    "main_order_by_asc": order_by["asc"],
-                    "side_order_by_rowA": u_order_by["rowA"],
-                    "side_order_by_asc": u_order_by["asc"],
-                    "main_limit_num": limit,
-                    "side_limit_num": u_limit,
-                    "main_offset_num": offset,
-                    "side_offset_num": u_offset
-                })
+                cursor.execute()
                 self.__connection.commit()
                 return cursor.fetchall()
             
         else:
             with self.__connection.cursor() as cursor:
-                    cursor.execute(querry_string, {
-                        "main_rows": ",".join(rows) if len(rows) > 1 else rows[0],
-                        "main_table": tbl,
-                        "main_where_rowA": where["rowA"],
-                        "main_where_rowB": where["rowB"],
-                        "main_where_op": where["operation"],
-                        "main_order_by_rowA": order_by["rowA"],
-                        "main_order_by_asc": order_by["asc"],
-                        "main_limit_num": limit,
-                        "main_offset_num": offset,
-                    })
+                    cursor.execute(querry)
                     self.__connection.commit()
                     return cursor.fetchall()
-
-
-
-
-
