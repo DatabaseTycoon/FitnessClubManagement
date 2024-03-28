@@ -8,11 +8,22 @@ config = dotenv_values(__env_path)
 
 def main(db: Database):
 
-    res = db.select(["*"], "members", select_options={
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello1"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello2"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello3"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello4"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello5"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello5"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello5"])
+    ins_res = db.insert_into("members", rows=["name"], values=["Hello5"])
+
+    del_res = db.delete_from("members", {"operation": "=", "rowA": "name", "rowB": "Hello5"})
+
+    sel_res = db.select(["*"], "members", select_options={
         "WHERE": {"operation": "<=", "rowA": "memberid", "rowB": "2"}
     })
 
-    print(res)
+    print(sel_res, del_res, ins_res)
     exit(0)
 
 

@@ -19,6 +19,7 @@ class _OrderByHelper():
         self.has_order_by = exists
         self.asc = "ASC" if ASC else "DESC"
 
+
 class Database():
 
     def __init__(self, db_name: str, user_name: str, password: str, port: str) -> None:
@@ -31,12 +32,23 @@ class Database():
         except psycopg.OperationalError as e:
             print(e)
             exit(1)
-    
+
+
     def __add_cache(self, table: str):
         q = sql.SQL("SELECT * FROM {tbl} LIMIT 0").format(tbl=sql.Identifier(table))
         with self.__connection.cursor() as cursor:
             cursor.execute(q)
             self.__row_cache.update({table : [desc[0] for desc in cursor.description]})
+
+
+    def __form_del_querry(self, where_helper: _WhereHelper) -> sql.SQL:
+        ## Where
+        if where_helper.has_where:
+            where = sql.SQL(f" WHERE {{where_rowA}} {where_helper.op} {{where_rowB}} ")
+        else:
+            where = sql.SQL("")
+        
+        return sql.SQL((sql.SQL(f"DELETE FROM {{table}}") + where).as_string(self.__connection))
 
 
     def __form_sel_querry(self,
@@ -49,24 +61,24 @@ class Database():
                           order_helper: _OrderByHelper=_OrderByHelper(False, []), 
                           has_union: bool=False, union_op: dict={}) -> sql.SQL:
         
-        suff = "main_" if main else "side_"
+        pre = "main_" if main else "side_"
         ## Where
         if where_helper.has_where:
-            where = sql.SQL(f" WHERE {{{suff}where_rowA}} {where_helper.op} {{{suff}where_rowB}} ")
+            where = sql.SQL(f" WHERE {{{pre}where_rowA}} {where_helper.op} {{{pre}where_rowB}} ")
         else:
             where = sql.SQL("")
         
         ## ORDER BY
         if order_helper.has_order_by: #TODO Identifier use here
-            order_by = sql.SQL(f" ORDER BY {{{suff}order_by_rowA}} {order_helper.asc}")
+            order_by = sql.SQL(f" ORDER BY {{{pre}order_by_rowA}} {order_helper.asc}")
 
             if has_limit: #TODO use sql.Literal
-                limit = sql.SQL(f" LIMIT {{{suff}limit_num}} ")
+                limit = sql.SQL(f" LIMIT {{{pre}limit_num}} ")
             else:
                 limit = ""
 
             if has_offset: #TODO use sql.Literal
-                offset = sql.SQL(f" OFFSET {{{suff}offset_num}} ")
+                offset = sql.SQL(f" OFFSET {{{pre}offset_num}} ")
         else:
             order_by = sql.SQL("")
             limit = sql.SQL("")
@@ -85,8 +97,16 @@ class Database():
         else:
             union = sql.SQL("")
         
-        rows = f'{{{suff}rows}}' if not select_all else '*'
-        return sql.SQL((sql.SQL(f"SELECT {rows} FROM {{{suff}table}}") + where + union + order_by + limit + offset).as_string(self.__connection))
+        rows = f'{{{pre}rows}}' if not select_all else '*'
+        return sql.SQL((sql.SQL(f"SELECT {rows} FROM {{{pre}table}}") + where + union + order_by + limit + offset).as_string(self.__connection))
+    
+
+    def __form_insert_querry(self, has_rows: bool) -> sql.SQL:
+        if has_rows:
+            rows = sql.SQL(f" ({{rows}})")
+        else:
+            rows = ''
+        return sql.SQL((sql.SQL(f"INSERT INTO {{table}}") + rows + sql.SQL(f" VALUES ({{values}})")).as_string(self.__connection))
     
 
     def select(self, rows: 'list[str]', tbl: str, select_options: dict):
@@ -109,7 +129,7 @@ class Database():
                 ```
 
         Raises:
-            TypeError: If the parameters malformed
+            TypeError: For incorrect argument type
         """
         # Validate Params
         if type(rows) != list:
@@ -186,3 +206,81 @@ class Database():
                     cursor.execute(querry)
                     self.__connection.commit()
                     return cursor.fetchall()
+
+
+    def delete_from(self, tbl: str, where: 'dict|None'=None):
+        """Deletes from a specified table in the database
+
+        Args:
+            tbl (str): The name of the table
+            where (dict|None, optional): The where clause of the querry if it exists. Defaults to None.
+
+        Where dict format:
+        ```
+        # Will do rowA operation rowB
+        {"operation": ">", "rowA": "name", "rowB": "name2"}
+        ```
+        """
+        # Update Cache
+        if tbl not in self.__row_cache:
+            self.__add_cache(tbl)
+        
+        w_helper = _WhereHelper(bool(where), self.__row_cache[tbl], where["operation"], where["rowA"], where["rowB"])
+
+        querry = self.__form_del_querry(w_helper)
+        querry = querry.format(
+            table          =   sql.Identifier(tbl),
+            where_rowA     =   sql.Literal(where["rowA"]) if w_helper.is_row_A_Literal else sql.Identifier(where["rowA"]),
+            where_rowB     =   sql.Literal(where["rowB"]) if w_helper.is_row_B_Literal else sql.Identifier(where["rowB"]),
+        )
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(querry)
+            self.__connection.commit()
+
+    
+    def insert_into(self, tbl: str, values:'list[str]', rows:'list[str]'=None):
+        """Inserts specified values into specifed rows for a specified table in the database
+
+        Args:
+            tbl (str): The target table
+            values (list[str]): A list of values to insert
+            rows (list[str], optional): The rows to add. Defaults to None, when defaulted to None assumes all rows.
+
+        Raises:
+            TypeError: For incorrect argument types
+            ValueError: For incorrect argument values
+        """
+        if type(values) != list:
+            raise TypeError(f"{values}: not a list")
+        elif len(values) == 0:
+            raise TypeError(f"{values}: cannot be empty")
+        
+        # Update Cache
+        if tbl not in self.__row_cache:
+            self.__add_cache(tbl)
+
+        if rows:
+            if not all(row in self.__row_cache[tbl] for row in rows):
+                raise ValueError(f"Not all rows in {rows} exist in the table {tbl}")
+            use_rows = rows
+        else:
+            use_rows = self.__row_cache[tbl]
+
+        if not len(use_rows) == len(values):
+            raise ValueError(f"{values} and {use_rows} must be the same length")
+        
+        querry = self.__form_insert_querry(has_rows=bool(rows))
+        querry = querry.format(
+            table   =   sql.Identifier(tbl), 
+            values  =   sql.SQL(",").join([sql.Literal(v) for v in values]), 
+            rows    =   sql.SQL(",").join([sql.Identifier(r) for r in use_rows])
+        )
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(querry)
+            self.__connection.commit()
+        
+
+
+
