@@ -23,7 +23,12 @@ def main(db: Database):
         "WHERE": {"operation": "<=", "rowA": "memberid", "rowB": "2"}
     })
 
-    print(sel_res, del_res, ins_res)
+    sel_res_or = db.select_with_or(["*"], "members", 
+                                   {"operation": "<=", "rowA": "memberid", "rowB": "2"},
+                                   {"operation": ">=", "rowA": "memberid", "rowB": "3"},
+                                   {"operation": "=", "rowA": "memberid", "rowB": "4"})
+
+    print(sel_res, sel_res_or, del_res, ins_res)
     exit(0)
 
 
