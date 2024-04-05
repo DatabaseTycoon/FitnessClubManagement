@@ -1,0 +1,1 @@
+-- Test queries manually found to determine how to program functions implementing them for DB features.
