@@ -9,6 +9,7 @@ DROP TABLE Statistic;
 DROP TABLE Runs;
 DROP TABLE GymClass;
 DROP TABLE Equipment;
+DROP TABLE Room;
 DROP TABLE IsTrainer;
 DROP TABLE IsAdmin;
 DROP TABLE Staff;
