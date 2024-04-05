@@ -8,8 +8,8 @@ class _WhereHelper():
             raise ValueError("Where operator is not valid: " + operator)
         self.op = operator
 
-        self.is_row_A_Literal = rA.isnumeric() or rA not in column_names if rA != "" else False
-        self.is_row_B_Literal = rB.isnumeric() or rB not in column_names if rB != "" else False
+        self.is_row_A_Literal = (rA.isnumeric() or rA not in column_names) if rA != "" else False
+        self.is_row_B_Literal = (rB.isnumeric() or rB not in column_names) if rB != "" else False
 
 
 class _OrderByHelper():
@@ -106,6 +106,60 @@ class Database():
             rows = ''
         return sql.SQL((sql.SQL(f"INSERT INTO {{table}}") + rows + sql.SQL(f" VALUES ({{values}})")).as_string(self.__connection))
     
+
+    def select_with_or(self, rows: 'list[str]', tbl: str, *ORed_conditions: 'dict'):
+        """Used to run a select querry with ORed WHERE conditions.
+
+        Args:
+            rows (list[str]): Rows to be returned
+            tbl (str): The targetted table name
+            ORed_conditions (tuple[dict]): A list of dicts formmated as such ``` {"operation": ">", "rowA": "name", "rowB": "name2"} ``` This dict CANNOT be empty.
+        """
+
+        if type(rows) != list:
+            raise TypeError(f"{rows}: not a list")
+        elif len(rows) == 0:
+            raise TypeError(f"{rows}: cannot be empty")
+        elif [condition for condition in ORed_conditions if not condition]:
+            raise TypeError(f"Found empty condition in ORed list: {ORed_conditions}")
+        
+        select_all_rows = rows[0] == "*"
+
+        # Update Cache
+        if tbl not in self.__row_cache:
+            self.__add_cache(tbl)
+
+        helped_conditions = [_WhereHelper(True, self.__row_cache[tbl], cond["operation"], cond["rowA"], cond["rowB"]) 
+                for cond in ORed_conditions]
+        
+        string_rows = f'{{rows}}' if not select_all_rows else '*'
+        pre_querry = f"SELECT {string_rows} FROM {{table}} WHERE "
+        querry = sql.SQL(pre_querry)
+
+        # Not Or
+        querry = querry.format(table = sql.Identifier(tbl), rows = sql.SQL(",").join([sql.Identifier(r) for r in rows])).as_string(self.__connection)
+
+        # Or
+        for x in range(len(helped_conditions)):
+            cond_help = helped_conditions[x]
+            cond_obj = ORed_conditions[x]
+            OR_statement = "OR " if x != 0 else ""
+            querry += f"{OR_statement}{{}} {cond_obj["operation"]} {{}} "
+            querry = sql.SQL(querry).format(
+                sql.Literal(cond_obj["rowA"]) if cond_help.is_row_A_Literal else sql.Identifier(cond_obj["rowA"]), 
+                sql.Literal(cond_obj["rowB"]) if cond_help.is_row_B_Literal else sql.Identifier(cond_obj["rowB"])
+            ).as_string(self.__connection)
+        
+        # Finalize
+        querry = sql.SQL(querry)
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(querry)
+            self.__connection.commit()
+            return cursor.fetchall()
+
+
+
 
     def select(self, rows: 'list[str]', tbl: str, select_options: dict):
         """Used to run a select querry on the database
