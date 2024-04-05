@@ -8,10 +8,8 @@ class _WhereHelper():
             raise ValueError("Where operator is not valid: " + operator)
         self.op = operator
 
-        if rA != "":
-            self.is_row_A_Literal = rA.isnumeric() or rA not in column_names
-        if rB != "":
-            self.is_row_B_Literal = rB.isnumeric() or rB not in column_names
+        self.is_row_A_Literal = rA.isnumeric() or rA not in column_names if rA != "" else False
+        self.is_row_B_Literal = rB.isnumeric() or rB not in column_names if rB != "" else False
 
 
 class _OrderByHelper():
