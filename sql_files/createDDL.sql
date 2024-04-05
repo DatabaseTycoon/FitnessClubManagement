@@ -22,13 +22,13 @@ CREATE TABLE Staff (
 	phoneNumber varchar(11)
 );
 
-CREATE TABLE isAdmin (
+CREATE TABLE IsAdmin (
 	adminID int REFERENCES Administrator (adminID),
 	staffID int REFERENCES Staff (staffID),
 	PRIMARY KEY (adminID, staffID)
 );
 
-CREATE TABLE isTrainer (
+CREATE TABLE IsTrainer (
 	trainerID int REFERENCES Trainer (trainerID),
 	staffID int REFERENCES Staff (staffID),
 	PRIMARY KEY (trainerID, staffID)
@@ -49,8 +49,8 @@ CREATE TABLE Equipment (
 CREATE TABLE GymClass (
 	classID int PRIMARY KEY,
 	roomID int REFERENCES Room (roomID), 
-	startDate date NOT NULL,
-	endDate date NOT NULL,
+	startDate timestamp NOT NULL,
+	endDate timestamp NOT NULL,
 	capacity int 
 );
 
