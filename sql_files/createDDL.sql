@@ -79,7 +79,7 @@ CREATE TABLE FitnessGoal (
 );
 
 CREATE TABLE ContactInfo (
-	ContactID srial PRIMARY KEY,
+	ContactID serial PRIMARY KEY,
 	firstName varchar(20) NOT NULL,
 	lastName varchar(20) NOT NULL,
 	email varchar(60) NOT NULL,
