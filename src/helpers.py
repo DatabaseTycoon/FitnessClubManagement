@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from src.db_api.database import Database
+
 
 def get_option_input(options: list[str], title: str = "Options:", number_of_columns: int = 3):
     number_of_columns = min(number_of_columns, len(options))
@@ -48,3 +50,7 @@ def get_date_input(prompt=" > "):
             return date_of_birth.strftime("%Y-%m-%d")
         except ValueError:
             print("Incorrect date format. Please try again.")
+
+
+def get_all(db: Database, table_name: str) -> list[tuple[str]]:
+    return db.select(['*'], table_name, {})
