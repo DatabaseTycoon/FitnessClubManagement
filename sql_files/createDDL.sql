@@ -17,9 +17,7 @@ CREATE TABLE PersonName (
 
 CREATE TABLE Staff (
 	staffID serial PRIMARY KEY,
-	nameID int REFERENCES PersonName (nameID),
-	email varchar(60) NOT NULL,
-	phoneNumber varchar(11)
+	contactID int REFERENCES ContactInfo (emergencyContactID)
 );
 
 CREATE TABLE IsAdmin (
@@ -80,24 +78,19 @@ CREATE TABLE FitnessGoal (
 	targetWeight int NOT NULL
 );
 
-CREATE TABLE EmergencyContact (
-	emergencyContactID serial PRIMARY KEY,
-	nameID int REFERENCES PersonName (nameID),
-	dateOfBirth date,
-	-- Contact info reuse with staff (maybe that's okay though)
+CREATE TABLE ContactInfo (
+	ContactID srial PRIMARY KEY,
+	firstName varchar(20) NOT NULL,
+	lastName varchar(20) NOT NULL,
 	email varchar(60) NOT NULL,
 	phoneNumber varchar(11)
 );
 
 CREATE TABLE PersonalInfo (
 	personalInfoID serial PRIMARY KEY,
-	nameID int REFERENCES PersonName (nameID),
-	emergencyContactID int REFERENCES EmergencyContact (emergencyContactID),
-	-- Why store DoB?... -> What if name became contact info (used by three tables now): FName, LName, email, number.
-	dateOfBirth date,
-	-- Contact info reuse with staff+EContact (maybe that's okay though)
-	email varchar(60) NOT NULL,
-	phoneNumber varchar(11)
+    dateOfBirth date,
+	contactID int REFERENCES ContactInfo (emergencyContactID),
+	emergencyContactID int REFERENCES ContactInfo (emergencyContactID),
 );
 
 CREATE TABLE BillingInfo (
