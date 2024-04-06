@@ -3,7 +3,6 @@
 DROP TABLE MemberInfo;
 DROP TABLE BillingInfo;
 DROP TABLE PersonalInfo;
-DROP TABLE EmergencyContact;
 DROP TABLE FitnessGoal;
 DROP TABLE Statistic;
 DROP TABLE Runs;
@@ -16,3 +15,4 @@ DROP TABLE Staff;
 DROP TABLE PersonName;
 DROP TABLE Trainer;
 DROP TABLE Administrator;
+DROP TABLE ContactInfo;
