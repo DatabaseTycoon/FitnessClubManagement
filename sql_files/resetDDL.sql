@@ -12,7 +12,6 @@ DROP TABLE Room;
 DROP TABLE IsTrainer;
 DROP TABLE IsAdmin;
 DROP TABLE Staff;
-DROP TABLE PersonName;
 DROP TABLE Trainer;
 DROP TABLE Administrator;
 DROP TABLE ContactInfo;

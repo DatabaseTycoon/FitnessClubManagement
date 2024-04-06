@@ -2,8 +2,8 @@
 -- Can't name admin (keyword)
 CREATE TABLE ContactInfo (
 	ContactID serial PRIMARY KEY,
-	firstName varchar(20) NOT NULL,
-	lastName varchar(20) NOT NULL,
+	firstName text NOT NULL,
+	lastName text NOT NULL,
 	email varchar(60) NOT NULL,
 	phoneNumber varchar(11)
 );
@@ -14,13 +14,6 @@ CREATE TABLE Administrator (
 
 CREATE TABLE Trainer (
 	trainerID serial PRIMARY KEY
-);
-
--- Name is a keyword
-CREATE TABLE PersonName (
-	nameID serial PRIMARY KEY,
-	firstName varchar(20) NOT NULL,
-	lastName varchar(20) NOT NULL
 );
 
 CREATE TABLE Staff (
