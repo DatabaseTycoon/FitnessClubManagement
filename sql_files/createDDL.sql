@@ -1,5 +1,13 @@
 -- DDL file for FitnessClubManagement
 -- Can't name admin (keyword)
+CREATE TABLE ContactInfo (
+	ContactID serial PRIMARY KEY,
+	firstName varchar(20) NOT NULL,
+	lastName varchar(20) NOT NULL,
+	email varchar(60) NOT NULL,
+	phoneNumber varchar(11)
+);
+
 CREATE TABLE Administrator (
 	adminID serial PRIMARY KEY
 );
@@ -17,7 +25,7 @@ CREATE TABLE PersonName (
 
 CREATE TABLE Staff (
 	staffID serial PRIMARY KEY,
-	contactID int REFERENCES ContactInfo (emergencyContactID)
+	contactID int REFERENCES ContactInfo (contactID)
 );
 
 CREATE TABLE IsAdmin (
@@ -78,19 +86,12 @@ CREATE TABLE FitnessGoal (
 	targetWeight int NOT NULL
 );
 
-CREATE TABLE ContactInfo (
-	ContactID serial PRIMARY KEY,
-	firstName varchar(20) NOT NULL,
-	lastName varchar(20) NOT NULL,
-	email varchar(60) NOT NULL,
-	phoneNumber varchar(11)
-);
 
 CREATE TABLE PersonalInfo (
 	personalInfoID serial PRIMARY KEY,
     dateOfBirth date,
-	contactID int REFERENCES ContactInfo (emergencyContactID),
-	emergencyContactID int REFERENCES ContactInfo (emergencyContactID),
+	contactID int REFERENCES ContactInfo (contactID),
+	emergencyContactID int REFERENCES ContactInfo (contactID)
 );
 
 CREATE TABLE BillingInfo (
