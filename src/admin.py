@@ -38,7 +38,7 @@ class Admin:
                 print("{:<10} {:<15} {:<30} {:<10}".format(equipment_id, status, equipment_name, room_id))
 
             option_list = ["Quit", "Sort by room", "Sort by status", "Filter for Working", "Filter for Maintenance",
-                      "Filter for Out of Order"]
+                           "Filter for Out of Order"]
             option = get_option_input(option_list)
 
             if option == 0:
@@ -58,7 +58,6 @@ class Admin:
 
         self.show_main_menu()
 
-
     def book_class(self, class_capacity: int, start_time, end_time, equipment_names: list[str] = None):
         available_rooms = self._get_available_rooms(start_time, end_time, equipment_names)
 
@@ -68,12 +67,10 @@ class Admin:
 
         # Create a new class
         self.db.insert_into('gymclass',
-                       [available_rooms.pop()[0], start_time, end_time, class_capacity],
-                       ['roomid', 'startdate', 'enddate', 'capacity'])
+                            [available_rooms.pop()[0], start_time, end_time, class_capacity],
+                            ['roomid', 'startdate', 'enddate', 'capacity'])
 
-        print('Booked class, new class list:')
-        # TODO: improve printing
-        print(get_all(self.db, 'gymclass'))
+        print('Booked class.')
 
     def _get_bookings(self, time_start, time_end) -> set[tuple[str]]:
         def is_before(s1, e1, sTest):
@@ -105,7 +102,6 @@ class Admin:
                 bookings.append((cls[ROOM_INDEX],))
         return set(bookings)
 
-
     def _get_equipment_rooms(self, equipment_names) -> set[tuple[str]]:
         NAME_INDEX = 3
         ROOM_INDEX = 1
@@ -119,11 +115,10 @@ class Admin:
                 equipment_rooms.add((equipment[ROOM_INDEX],))
         return equipment_rooms
 
-
-    def _get_available_rooms(self: Database,
-                            time_start: datetime.datetime,
-                            time_end: datetime.datetime,
-                            equipment_names: list[str] = None) -> set[tuple[str]]:
+    def _get_available_rooms(self,
+                             time_start: datetime,
+                             time_end: datetime,
+                             equipment_names: list[str] = None) -> set[tuple[str]]:
         """
         Return view of booked rooms at a particular time.
 
@@ -135,11 +130,9 @@ class Admin:
         # Filter out booked rooms from all rooms
         all_rooms = set(get_all(self.db, 'room'))  # Returns IDs, should be unique
         # Find which classes correspond to bookings at given times
-        all_bookings = self._get_bookings(self.db, time_start, time_end)
+        all_bookings = self._get_bookings(time_start, time_end)
         # Find rooms with matching equipment needs (no needs, all rooms accepted)
-        all_equipment_rooms = all_rooms if not equipment_names else self._get_equipment_rooms(self.db, equipment_names)
+        all_equipment_rooms = all_rooms if not equipment_names else self._get_equipment_rooms(equipment_names)
 
         # Return query result by applying filters (with intersection + subtraction)
         return all_equipment_rooms.intersection(all_rooms - all_bookings)
-
-
