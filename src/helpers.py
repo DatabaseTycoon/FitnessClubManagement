@@ -18,7 +18,8 @@ def get_option_input(options: list[str], title: str = "Options:", number_of_colu
     i = number_of_lines * number_of_columns
     for j in range(remainder):
         print(f'{i + 1 + j:>2}) {options[i + j]:<{column_widths[j]}}', end='')
-    # print('\n', end='')
+    if remainder != 0:
+        print('\n', end='')
 
     user_input = get_int_input(min=1, max=len(options))
 

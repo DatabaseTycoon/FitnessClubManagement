@@ -3,8 +3,9 @@ from src.db_api.database import Database
 
 
 class Member:
-    def __init__(self, member_id: int):
+    def __init__(self, member_id: int, db: Database):
         self.memberId = member_id
+        self.db = db
 
     def show_main_menu(self):
         input("Member Menu " + str(self.memberId))
@@ -18,7 +19,7 @@ class Member:
 
     @staticmethod
     def register(db: Database):
-        print("\n"*40)
+        print("\n" * 40)
         print("\tMember Registration")
 
         print("\n - Personal info -")
@@ -44,7 +45,8 @@ class Member:
         weight = input("Weight: ")
         targetDate = get_date_input("Target Date (YYYY/MM/DD): ")
 
-        db.insert_into("fitnessgoal", [2, False, targetDate, weight], ["goalid", "isachieved", "targetdate", "targetweight"])
+        # TODO: Insert the user data to relevant tables
+        # db.insert_into("fitnessgoal", [2, False, targetDate, weight], ["goalid", "isachieved", "targetdate", "targetweight"])
 
         # MemberInfo(memberInfo, personalInfoID, billingInfoID, statID, goalID)
         # FitnessGoal(goalID, isAchieved, targetDate, targetWeight)
@@ -52,16 +54,14 @@ class Member:
         # PersonalInfo(personalInfoID, nameID, emergencyContactID, dateOfBirth, email, phoneNumber)
         # EmergencyContact(emergencyContactID, nameID, dateOfBirth, email, phoneNumber)
 
-        # insert_into(self, tbl: str, values: 'list[str]', rows: 'list[str]' = None):
-        #     """Inserts specified values into specified rows for a specified table in the database
-        #
-        #     Args:
-        #         tbl (str): The target table
-        #         values (list[str]): A list of values to insert
-        #         rows (list[str], optional): The rows to add. Defaults to None, when defaulted to None assumes all rows.
+    def show_main_menu(self):
+        print("\n" * 50)
+        main_menu_options = ["Update User Info", "Display Dashboard", "Register For Class"]
+        selected_option = get_option_input(main_menu_options, "Member Menu", 2)
 
-        # sel_res = db.select(["*"], "memberinfo", select_options={
-        #     "WHERE": {"operation": "=", "rowA": "memberinfo", "rowB": str(member_id)}
-        # })
-        # return sel_res
-
+        if selected_option == 0:
+            print("Selected: Update User Info")
+        elif selected_option == 1:
+            print("Selected: Display Dashboard")
+        elif selected_option == 2:
+            print("Selected: Register For Class")
