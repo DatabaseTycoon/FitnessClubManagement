@@ -1,5 +1,5 @@
 from helpers import *
-from src.db_api.database import Database
+from db_api.database import Database
 
 
 class Member:
