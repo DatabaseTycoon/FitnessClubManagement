@@ -25,7 +25,7 @@ class Trainer:
                 return
 
     def view_profile(self) -> None:
-        members = self.db.select(['memberinfo', 'personalinfoid', 'billinginfoid', 'goalid'], 'memberinfo', {})
+        members = self.db.select(['memberinfo', 'personalinfoid'], 'memberinfo', {})
         p_info = self.db.select(['personalinfoid', 'contactid'], 'personalinfo', {})
         c_info = self.db.select(['contactid', 'firstname', 'lastname', 'email'], 'contactinfo', {})
 
@@ -46,17 +46,22 @@ class Trainer:
             _id = int(input(" > select member id to view: "))
 
         # reselect specific member (get first id match, in theory only one):
-        member = [member for member in members if member[0] == _id].pop()
-        g_info = self.db.select(['*'], 'fitnessgoal',
-                                {'operation': '=', 'rowA': 'goalID', 'rowB': member[3]})
+        g_info = self.db.select_with_or(['*'], 'fitnessgoal',
+                                {'operation': '=', 'rowA': 'memberid', 'rowB': str(_id)})
 
         member_pinfo = list(filter(lambda personal: personal[0] == member[1], p_info))[0]
         member_contact = list(filter(lambda contact: contact[0] == member_pinfo[1], c_info))[0]
+        print("\n" * 50)
         print("\n\t\tSELECTED MEMBER INFO\n")
-        print("Selected member {}, {}'s goal:".format(member_contact[1], member_contact[2]))
+        print("Selected member {}, {}'s goals:".format(member_contact[1], member_contact[2]))
+        print("{:<10} {:<20} {:<20} {:<10}".format("Type", "Description", "Acheived", "Target"))
         for goal in g_info:
-            print("{:<10} {:<20} {:<20} {:<10}".format("goalID", "isAchieved", "targetDate", "targetWeight"))
-            print("{:<10} {:<20} {:<20} {:<10}".format(goal[0], goal[1], goal[2], goal[3]))
+            type_ = goal[1]
+            desc = goal[2]
+            acheived = "yes" if goal[3] else "no"
+            target = str(goal[4])
+
+            print("{:<10} {:<20} {:<20} {:<10}".format(type_, desc, acheived, target))
 
 
-        time.sleep(2)
+        input("\nPress enter to continue > ")

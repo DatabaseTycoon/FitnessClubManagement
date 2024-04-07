@@ -61,25 +61,6 @@ CREATE TABLE Runs (
 );
 
 
--- Should statistic be "value", and "type" where type is a string element of {HeartRate, BloodPressure, Weight, Height}?
-CREATE TABLE Statistic (
-	statID serial PRIMARY KEY,
-	HeartRate int,
-	BloodPressure int,
-	Weight int,
-	Height int,
-	statDate date NOT NULL
-);
-
--- What if we reused statistic to be able to check any metric? I.e. target metric? Statistic could contain metric actually
-CREATE TABLE FitnessGoal (
-	goalID serial PRIMARY KEY,
-	isAchieved bool NOT NULL,
-	targetDate date NOT NULL,
-	targetWeight int NOT NULL
-);
-
-
 CREATE TABLE PersonalInfo (
 	personalInfoID serial PRIMARY KEY,
     dateOfBirth date,
@@ -100,7 +81,23 @@ CREATE TABLE BillingInfo (
 CREATE TABLE MemberInfo(
 	memberInfo serial PRIMARY KEY,
 	personalInfoID int REFERENCES PersonalInfo (personalInfoID),
-	billingInfoID int REFERENCES BillingInfo (billingInfoID),
-	statID int REFERENCES Statistic (statID),
-	goalID int REFERENCES FitnessGoal (goalID)
+	billingInfoID int REFERENCES BillingInfo (billingInfoID)
+);
+
+-- Should statistic be "value", and "type" where type is a string element of {HeartRate, BloodPressure, Weight, Height}?
+CREATE TABLE Statistic (
+	memberID int REFERENCES MemberInfo (memberInfo),
+	type TEXT,
+	value TEXT,
+	PRIMARY KEY (memberID, type)
+);
+
+-- What if we reused statistic to be able to check any metric? I.e. target metric? Statistic could contain metric actually
+CREATE TABLE FitnessGoal (
+	memberID int REFERENCES MemberInfo (memberInfo),
+	type TEXT,
+	description TEXT,
+	isAchieved bool NOT NULL,
+	targetDate date NOT NULL,
+	PRIMARY KEY (memberID, type)
 );
