@@ -1,5 +1,6 @@
 from helpers import *
-from src.db_api.database import Database
+from db_api.database import Database
+import time
 
 
 class Member:
@@ -65,3 +66,5 @@ class Member:
             print("Selected: Display Dashboard")
         elif selected_option == 2:
             print("Selected: Register For Class")
+        
+        time.sleep(2)

@@ -12,11 +12,24 @@ config = dotenv_values(__env_path)
 
 
 def start_screen(db: Database):
-    print("\n" * 40)
-    option = get_option_input(["Login", "Register"], "Welcome to Fitness Club Management App")
+    try:
+        while True:
+            print("\n" * 40)
+            option = get_option_input(["Login", "Register", "Quit"], "Welcome to Fitness Club Management App")
+            if option == 0:
+                show_login(db)
+            elif option == 1:
+                Member.register(db)
+            elif option == 2:
+                return
+    except KeyboardInterrupt as ke:
+        print(("\n" * 40) + "ABORTING...")
+        exit(0)
 
-    if option == 0:
-        user_type = get_option_input(["Member Login", "Staff Login"], "Select Login Type:")
+def show_login(db: Database):
+    while True:
+        print("\n" * 40)
+        user_type = get_option_input(["Member Login", "Staff Login", "Back"], "Select Login Type:")
         print()
         if user_type == 0:
             print("Enter your member id to login.")
@@ -30,7 +43,7 @@ def start_screen(db: Database):
 
             member = Member(member_infos[0][0], db)
             member.show_main_menu()
-        else:
+        elif user_type == 1:
             print("Enter your staff id to login.")
             staff_id = get_int_input("StaffID: ")
 
@@ -46,10 +59,9 @@ def start_screen(db: Database):
             else:
                 trainer = Trainer(staff_info[1], staff_id, db)
                 trainer.show_main_menu()
-
-            print("StaffID: ", staff_id)
-    else:
-        Member.register(db)
+        elif user_type == 2:
+            return
+    
 
 
 if __name__ == "__main__":

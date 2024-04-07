@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from src.db_api.database import Database
+from db_api.database import Database
 
 
 def get_option_input(options: list[str], title: str = "Options:", number_of_columns: int = 3):
