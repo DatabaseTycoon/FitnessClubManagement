@@ -12,27 +12,31 @@ class Admin:
     def show_main_menu(self):
         while True:
             print("\n" * 50)
-            main_menu_options = ["Create Class", "Remove Class", "Equipment Maintenance Monitoring",
-                                "Billment And Payment", "Back"]
+            main_menu_options = ["See booked classes", "Book Class", "Cancel Class", "Equipment Maintenance Monitoring",
+                                 "Billment And Payment", "Back"]
             selected_option = get_option_input(main_menu_options, "Admin Menu", 2)
             if selected_option == 0:
-                print("Selected: Book class (manage booked rooms)")
+                print("Selected: See classes")
+                self.show_classes()
+            elif selected_option == 1:
+                print("Selected: Book class")
                 capacity = get_int_input(" > Please enter a capacity for the class ", 0, 20)
                 start_time = get_datetime_input(" > Please enter a start time for the class")
                 end_time = get_datetime_input(" > Please enter an end time for the class")
                 equipment_name_in = input("> Please enter a comma seperated list of required equipment for the class "
-                                        "(leave empty if N/A): ")
+                                          "(leave empty if N/A): ")
                 equipment_names = [name.strip() for name in equipment_name_in.split(",")]
                 self.book_class(capacity, start_time, end_time, equipment_names)
-            elif selected_option == 1:
-                print("Selected: Update Class Schedule")
             elif selected_option == 2:
-                self.equipment_maintenance_monitoring()
+                print("Selected: Cancel class")
+                class_id = get_int_input(" > Please enter the class ID of the class to cancel ", 0)
+                self.cancel_class(class_id)
             elif selected_option == 3:
-                self.billment_and_payment()
+                self.equipment_maintenance_monitoring()
             elif selected_option == 4:
+                self.billment_and_payment()
+            elif selected_option == 5:
                 return
-
 
     def equipment_maintenance_monitoring(self):
         equipment_data = self.db.select(["*"], "equipment", select_options={})
@@ -67,7 +71,6 @@ class Admin:
             elif option == 5:
                 return
 
-
     def billment_and_payment(self):
         members = self.db.select(['memberinfo', 'personalinfoid', 'billinginfoid'], 'memberinfo', {})
         p_info = self.db.select(['personalinfoid', 'contactid'], 'personalinfo', {})
@@ -83,7 +86,8 @@ class Admin:
             for member in members:
                 member_pinfo = list(filter(lambda personal: personal[0] == member[1], p_info))[0]
                 member_contact = list(filter(lambda contact: contact[0] == member_pinfo[1], c_info))[0]
-                print("{:<10} {:<20} {:<20} {:<10}".format(member[0], member_contact[1], member_contact[2], member_contact[3]))
+                print("{:<10} {:<20} {:<20} {:<10}".format(member[0], member_contact[1], member_contact[2],
+                                                           member_contact[3]))
 
             error = False
             print("\n- B to go Back -")
@@ -105,7 +109,6 @@ class Admin:
             if error:
                 print("\nInvalid.\n")
                 time.sleep(2)
-
 
     def _show_billing(self, billing_info):
         print("\n" * 50)
@@ -132,7 +135,10 @@ class Admin:
             print("\n\nRETURN TO MEMBER SELECT...\n\n")
             time.sleep(2)
 
-
+    def cancel_class(self, class_id: int):
+        self.db.delete_from('gymclass', {"operation": "=", "rowA": "classid", "rowB": str(class_id)})
+        print('\n--Class deleted--\n')
+        time.sleep(2)
 
     def book_class(self, class_capacity: int, start_time, end_time, equipment_names: list[str] = None):
         available_rooms = self._get_available_rooms(start_time, end_time, equipment_names)
@@ -176,10 +182,10 @@ class Admin:
         bookings = []
         for cls in all_classes:
             # If either start/end times fall within a booked class time, add to bookings list
-            if not (is_before(time_start, time_end, cls[START_INDEX]) or is_after(time_start, time_end, cls[END_INDEX])):
+            if not (is_before(time_start, time_end, cls[START_INDEX]) or is_after(time_start, time_end,
+                                                                                  cls[END_INDEX])):
                 bookings.append((cls[ROOM_INDEX],))
         return set(bookings)
-
 
     def _get_equipment_rooms(self, equipment_names) -> set[tuple[str]]:
         NAME_I = 3
@@ -194,6 +200,24 @@ class Admin:
                 equipment_rooms.add((equipment[ROOM_INDEX],))
         return equipment_rooms
 
+    def show_classes(self):
+        classes = self.db.select(["*"], 'gymclass', {})
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\n\t\tCLASS LIST\n")
+        print("{:<30} {:<15} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in classes:
+            print("{:<30} {:<15} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
+
+        options = ["Back"]
+        option = get_option_input(options)
+        if option == 0:
+            print("RETURN TO ADMIN MENU...\n\n")
+            time.sleep(2)
 
     def _get_available_rooms(self,
                              time_start: datetime,
