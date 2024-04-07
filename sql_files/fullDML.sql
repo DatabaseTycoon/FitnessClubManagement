@@ -29,15 +29,19 @@ INSERT INTO IsTrainer (trainerID, staffID)
 VALUES (1, 2),
        (2, 3);
 
--- Inserting Room data
+-- Inserting Room data (3x roooms)
+INSERT INTO Room DEFAULT VALUES;
+INSERT INTO Room DEFAULT VALUES;
 INSERT INTO Room DEFAULT VALUES;
 
 -- Inserting Equipment data
 INSERT INTO Equipment (roomID, status, equipmentName)
 VALUES
-    (1, 'Available', 'Treadmill'),
-    (1, 'In Use', 'Dumbbells'),
-    (1, 'Available', 'Elliptical');
+    (1, 'Working', 'Treadmill'),
+    (2, 'Working', 'Dumbbells'),
+    (3, 'Working', 'Elliptical'),
+    (1, 'Maintenance', 'Dumbbells'),
+    (1, 'Out of Order', 'Elliptical');
 
 -- Inserting GymClass data
 INSERT INTO GymClass (roomID, startDate, endDate, capacity)

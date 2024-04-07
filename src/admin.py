@@ -12,7 +12,7 @@ class Admin:
     def show_main_menu(self):
         while True:
             print("\n" * 50)
-            main_menu_options = ["Manage Booked Rooms", "Update Class Schedule", "Equipment Maintenance Monitoring",
+            main_menu_options = ["Create Class", "Remove Class", "Equipment Maintenance Monitoring",
                                 "Billment And Payment", "Back"]
             selected_option = get_option_input(main_menu_options, "Admin Menu", 2)
             if selected_option == 0:
@@ -90,10 +90,10 @@ class Admin:
             ans = input("\nMemberID > ")
             if ans == 'B':
                 return
-            
+
             if not ans.isnumeric():
                 error = True
-            else:    
+            else:
                 chosen_member = list(filter(lambda m: m[0] == int(ans), members))
                 if not chosen_member:
                     error = True
@@ -105,8 +105,8 @@ class Admin:
             if error:
                 print("\nInvalid.\n")
                 time.sleep(2)
-                
-    
+
+
     def _show_billing(self, billing_info):
         print("\n" * 50)
         billing_info = billing_info[1:]
@@ -182,14 +182,15 @@ class Admin:
 
 
     def _get_equipment_rooms(self, equipment_names) -> set[tuple[str]]:
-        NAME_INDEX = 3
+        NAME_I = 3
+        STATUS_I = 2
         ROOM_INDEX = 1
         all_equipment = get_all(self.db, 'equipment')
         equipment_rooms = set()
         for equipment in all_equipment:
             # If there exists a name in the given list which matches the current equipment name,
             #   save the room the equipment is in. Note: Capacity/Counts are considered out of scope atm
-            if (name for name in equipment_names if name == equipment[NAME_INDEX]):
+            if [name for name in equipment_names if name == equipment[NAME_I] and 'Working' == equipment[STATUS_I]]:
                 equipment_rooms.add((equipment[ROOM_INDEX],))
         return equipment_rooms
 
