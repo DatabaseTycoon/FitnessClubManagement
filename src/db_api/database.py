@@ -18,6 +18,24 @@ class _OrderByHelper():
         self.asc = "ASC" if ASC else "DESC"
 
 
+class _UpdateRowHelper():
+    def __init__(self, column_names: 'list[str]', updated_rows: 'list[tuple[str]]') -> None:
+        self.prevRows = []
+        self.newRows = []
+        for pair in updated_rows:
+            if pair[0] not in column_names:
+                raise ValueError(f"{pair[0]} not a column")
+            
+            self.prevRows.append(sql.Identifier(pair[0]))
+
+            if pair[1] in column_names:
+                self.newRows.append(sql.Identifier(pair[0]))
+            else:
+                self.newRows.append(sql.Literal(pair[1]))
+        
+        self.length = len(self.prevRows)
+
+
 class Database():
 
     def __init__(self, db_name: str, user_name: str, password: str, port: str) -> None:
@@ -105,7 +123,22 @@ class Database():
         else:
             rows = ''
         return sql.SQL((sql.SQL(f"INSERT INTO {{table}}") + rows + sql.SQL(f" VALUES ({{values}})")).as_string(self.__connection))
-    
+
+
+    def __form_update_querry(self, where_helper: _WhereHelper, udpate_row_helper: _UpdateRowHelper):
+
+        if where_helper.has_where:
+            where = f"WHERE {{where_rowA}} {where_helper.op} {{where_rowB}} "
+        else:
+            where = ""
+        
+        rows_string = sql.SQL(", ").join(
+            [ udpate_row_helper.prevRows[x] + sql.SQL(" = ") + udpate_row_helper.newRows[x] for x in range(udpate_row_helper.length)]
+        ).as_string(self.__connection)
+
+        return sql.SQL(f"UPDATE {{table}} SET {rows_string} {where}")
+
+        
 
     def select_with_or(self, rows: 'list[str]', tbl: str, *ORed_conditions: 'dict'):
         """Used to run a select querry with ORed WHERE conditions.
@@ -289,6 +322,9 @@ class Database():
         with self.__connection.cursor() as cursor:
             cursor.execute(querry)
             self.__connection.commit()
+        
+        # Update to cache deleted rows
+        self.__add_cache(tbl)
 
     
     def insert_into(self, tbl: str, values:'list[str]', rows:'list[str]'=None):
@@ -333,6 +369,49 @@ class Database():
             cursor.execute(querry)
             self.__connection.commit()
         
+        # Update to cache new rows
+        self.__add_cache(tbl)
+    
+
+    def update(self, tbl: str, updated_rows:'list[tuple[str]]', where:dict={'operation': "", "rowA": "", "rowB": ""}):
+        """Updates a table in the database
+
+        Args:
+            tbl (str): The target table
+            updated_rows (list[tuple[str]]): The rows and their updates. DOES NOT SUPPORT OPERATIONS. For example: `[("rowA", "3"), ("rowB", "123 Street")]`
+            where (_type_, optional): The where clause of the querry if it exists. Defaults to {'operation': "", "rowA": "", "rowB": ""}.
+        """
+
+        if type(updated_rows) != list:
+            raise TypeError(f"{updated_rows}: not a list")
+        elif len(updated_rows) == 0:
+            raise TypeError(f"{updated_rows}: cannot be empty")
+        elif not [True for tpl in updated_rows if type(tpl) == tuple and len(tpl) == 2]:
+            raise TypeError(f"{updated_rows}: tuples inside are malformed")
+        
+        # Update Cache
+        if tbl not in self.__row_cache:
+            self.__add_cache(tbl)
+        
+        w_helper = _WhereHelper(bool(where), self.__row_cache[tbl], where["operation"], where["rowA"], where["rowB"])
+        update_row_helper = _UpdateRowHelper(self.__row_cache[tbl], updated_rows)
+
+        querry = self.__form_update_querry(w_helper, update_row_helper)
+        
+        querry = querry.format(
+            table           =   sql.Identifier(tbl),
+            where_rowA      =   sql.Literal(where["rowA"]) if w_helper.is_row_A_Literal else sql.Identifier(where["rowA"]),
+            where_rowB      =   sql.Literal(where["rowB"]) if w_helper.is_row_B_Literal else sql.Identifier(where["rowB"]),
+        )
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(querry)
+            self.__connection.commit()
+
+        
+
+        
+
 
 
 
