@@ -51,6 +51,15 @@ def get_date_input(prompt=" > "):
         except ValueError:
             print("Incorrect date format. Please try again.")
 
+def get_datetime_input(prompt=" > ") -> datetime:
+    while True:
+        dob = input(prompt+" (YYYY/MM/DD/HH): ")
+        try:
+            date = datetime.strptime(dob, "%Y/%m/%d/%H")
+            return date
+        except ValueError:
+            print("Incorrect date format. Please try again.")
+
 
 def get_all(db: Database, table_name: str) -> list[tuple[str]]:
     return db.select(['*'], table_name, {})

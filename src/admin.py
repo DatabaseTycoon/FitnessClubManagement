@@ -15,7 +15,14 @@ class Admin:
         selected_option = get_option_input(main_menu_options, "Admin Menu", 2)
 
         if selected_option == 0:
-            print("Selected: Manage Booked Rooms")
+            print("Selected: Book class (manage booked rooms)")
+            capacity = get_int_input(" > Please enter a capacity for the class ", 0, 20)
+            start_time = get_datetime_input(" > Please enter a start time for the class")
+            end_time = get_datetime_input(" > Please enter an end time for the class")
+            equipment_name_in = input("> Please enter a comma seperated list of required equipment for the class "
+                                      "(leave empty if N/A): ")
+            equipment_names = [name.strip() for name in equipment_name_in.split(",")]
+            self.book_class(capacity, start_time, end_time, equipment_names)
         elif selected_option == 1:
             print("Selected: Update Class Schedule")
         elif selected_option == 2:
@@ -106,7 +113,6 @@ class Admin:
         NAME_INDEX = 3
         ROOM_INDEX = 1
         all_equipment = get_all(self.db, 'equipment')
-        print(all_equipment)
         equipment_rooms = set()
         for equipment in all_equipment:
             # If there exists a name in the given list which matches the current equipment name,
