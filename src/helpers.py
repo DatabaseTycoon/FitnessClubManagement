@@ -42,12 +42,12 @@ def get_int_input(prompt=" > ", min: int = None, max: int = None):
     return user_input
 
 
-def get_date_input(prompt=" > "):
+def get_date_input(prompt=" > ", format="%Y/%m/%d"):
     while True:
         dob = input(prompt)
         try:
-            date_of_birth = datetime.strptime(dob, "%Y/%m/%d")
-            return date_of_birth.strftime("%Y-%m-%d")
+            date = datetime.strptime(dob, format)
+            return date
         except ValueError:
             print("Incorrect date format. Please try again.")
 
@@ -63,3 +63,13 @@ def get_datetime_input(prompt=" > ") -> datetime:
 
 def get_all(db: Database, table_name: str) -> list[tuple[str]]:
     return db.select(['*'], table_name, {})
+
+def get_last_id(db, table_name, id_column_name):
+    last_id = db.select([id_column_name], table_name, select_options={
+        "ORDER_BY": {"asc": False, "rowA": id_column_name},
+        "LIMIT": "1",
+        "OFFSET": "0"
+    })
+    if len(last_id) == 0:
+        return 1
+    return last_id[0][0]
