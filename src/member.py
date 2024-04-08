@@ -152,7 +152,88 @@ class Member:
                 return
 
     def display_dashboard(self):
-        print("\n Dashboard")
+        print("\n" * 40)
+        print("\t\t\tMEMBER DASHBOARD\n")
+
+        self._show_upcoming_classes()
+        self._show_statistics()
+        self._show_fitness_goals()
+
+        input("\n\n\nPress any key to go back to the main menu...")
+
+    def _show_statistics(self):
+        print("\n" * 2)
+        print("\tSTATISTICS\n")
+        stats = self.db.select(['type', 'value'], 'statistic', select_options={
+            "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+        })
+
+        if len(stats) > 0:
+            print(
+                "{:<15} {:<30}".format("Type", "Value"))
+            for s in stats:
+                print("{:<15} {:<30}".format(s[0], s[1]))
+        else:
+            print("   You don't have any statistics")
+
+    def _show_fitness_goals(self):
+        print("\n"*2)
+        print("\tFITNESS GOALS\n")
+        goals = self.db.select(['type', 'description', 'isachieved', 'targetdate'], 'fitnessgoal', select_options={
+            "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+        })
+
+        current_goals = []
+        completed_goals = []
+        for goal in goals:
+            if goal[2]:
+                completed_goals.append(goal)
+            else:
+                current_goals.append(goal)
+
+        print("Targeted Fitness Goals:\n")
+        if len(current_goals) > 0:
+            print(
+                "{:<15} {:<30} {:<15}".format("Goal Type", "Description", "Target Date"))
+            for goal in current_goals:
+                print("{:<15} {:<30} {:<15}".format(goal[0], goal[1], str(goal[3].strftime("%Y/%m/%d"))))
+        else:
+            print("   You don't have any fitness goals")
+
+        print("\nAchievements:\n")
+        if len(completed_goals) > 0:
+            print(
+                "{:<15} {:<30} {:<15}".format("Goal Type", "Description", "Achievement Date"))
+            for goal in completed_goals:
+                print("{:<15} {:<30} {:<15}".format(goal[0], goal[1], str(goal[3].strftime("%Y/%m/%d"))))
+        else:
+            print("   You don't have any achieved fitness goals")
+
+
+    def _show_upcoming_classes(self):
+        print("\n\tUPCOMING CLASSES\n")
+        classIDs = self.db.select(['classid'], 'participates', select_options={
+            "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+        })
+        classIDs = [c[0] for c in classIDs]
+        if len(classIDs) == 0:
+            print("You don't have any upcoming classes")
+        else:
+            where_conditions = []
+            for classID in classIDs:
+                where_conditions.append({"operation": "=", "rowA": "classid", "rowB": str(classID)})
+            classes = self.db.select_with_or(["*"], "gymclass", *where_conditions)
+
+            upcomingClasses = list(filter(lambda c: (c[2] > datetime.now()), classes))
+
+            print(
+                "{:<10} {:<10} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+            for cls in upcomingClasses:
+                print("{:<10} {:<10} {:<15} {:<15} {:<10}".format(cls[0],
+                                                                  cls[1],
+                                                                  str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                                  str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                                  cls[4]))
 
     def register_for_class(self):
         print("\n" * 40)
@@ -161,10 +242,10 @@ class Member:
         classes = self.db.select(['classid', 'roomid', 'startdate', 'enddate', 'capacity'], 'gymclass', select_options={
             "WHERE": {"operation": ">", "rowA": "startdate", "rowB": datetime.today().strftime("%Y/%m/%d")}
         })
-        classes = [c for c in classes if not self._is_class_available_for_registration(c, self.member_id)]
+        classes = [c for c in classes if self._is_class_available_for_registration(c, self.member_id)]
 
         if len(classes) == 0:
-            print("\nNo classes are available for registration at this time!")
+            print("\n\tNo classes are available for registration at this time!")
             time.sleep(2)
             return
 
@@ -187,13 +268,6 @@ class Member:
         print("\nSuccessfully registered for class")
         time.sleep(2)
 
-    def _is_class_available_for_registration(self, cls, memberid):
-        class_id, room_id, start_date, end_date, capacity = cls
-        participants = self.db.select(['memberid'], 'participates', select_options={
-            "WHERE": {"operation": "=", "rowA": "classid", "rowB": str(class_id)}
-        })
-        return len(participants) < int(capacity) and any(p[0] == memberid for p in participants)
-
     def show_main_menu(self):
         while True:
             print("\n" * 50)
@@ -208,3 +282,10 @@ class Member:
                 self.register_for_class()
             elif selected_option == 3:
                 return
+
+    def _is_class_available_for_registration(self, cls, memberid):
+        class_id, room_id, start_date, end_date, capacity = cls
+        participants = self.db.select(['memberid'], 'participates', select_options={
+            "WHERE": {"operation": "=", "rowA": "classid", "rowB": str(class_id)}
+        })
+        return len(participants) < int(capacity) and not any(p[0] == memberid for p in participants)
