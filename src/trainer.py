@@ -13,15 +13,22 @@ class Trainer:
     def show_main_menu(self):
         while True:
             print("\n" * 50)
-            main_menu_options = ["View Member Profile", "Sets Available Times", "Back"]
-            selected_option = get_option_input(main_menu_options, "Trainer Menu", 2)
+            main_menu_options = ["View Member Profile", "Schedule teaching", "View Schedule", "Cancel teaching", "Back"]
+            selected_option = get_option_input(main_menu_options, "Trainer Menu", 3)
 
             if selected_option == 0:
                 print("Selected: View Member Profile")
                 self.view_profile()
             elif selected_option == 1:
-                print("Selected: Sets Available Times")
+                print("Selected: Schedule teaching")
+                self.teach_class()
             elif selected_option == 2:
+                print("Selected: View Schedule")
+                self.see_ran_classes()
+            elif selected_option == 3:
+                print("Selected: Cancel teaching")
+                self.teach_class()
+            elif selected_option == 4:
                 return
 
     def view_profile(self) -> None:
@@ -65,3 +72,34 @@ class Trainer:
 
 
         input("\nPress enter to continue > ")
+
+    def teach_class(self):
+        # Step 1: Show teacherless classes
+        runs = self.db.select(['classid'], 'runs', {})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+        classes = self.db.select(["*"], 'gymclass',{})
+        non_ran_classes = [cls for cls in classes if cls[0] not in ran_classes_ids]
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\n\t\tCLASS LIST (unassigned only)\n")
+        print("{:<30} {:<15} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in non_ran_classes:
+            print("{:<30} {:<15} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
+
+        # Step 2: select a class
+        class_id = None
+        class_ids = [cls[0] for cls in non_ran_classes]
+        while class_id not in class_ids:
+            class_id = int(input(" select class id to teach > "))
+
+        # Step 3: Create runs relation
+        self.db.insert_into('runs', [str(self.trainer_id), str(class_id)], ['trainerid', 'classid'])
+        print("\n Trainer now teaches class ID: ", class_id)
+        time.sleep(2)
+
+    def see_ran_classes(self):
+        pass

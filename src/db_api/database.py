@@ -4,7 +4,7 @@ import psycopg.sql as sql
 class _WhereHelper():
     def __init__(self, exists: bool, column_names: 'list[str]', operator: str="", rA: str="", rB: str="") -> None:
         self.has_where = exists
-        if not operator in [">", "<", ">=", "<=", "=", ""]:
+        if not operator in [">", "<", ">=", "<=", "=", "!=", ""]:
             raise ValueError("Where operator is not valid: " + operator)
         self.op = operator
 
