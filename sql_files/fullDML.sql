@@ -54,18 +54,6 @@ INSERT INTO Runs (trainerID, classID)
 VALUES (1, 1),
        (2, 2);
 
--- Inserting Statistic data
-INSERT INTO Statistic (HeartRate, BloodPressure, Weight, Height, statDate)
-VALUES
-    (70, 120, 160, 70, '2024-04-01'),
-    (75, 118, 155, 68, '2024-04-02');
-
--- Inserting FitnessGoal data
-INSERT INTO FitnessGoal (isAchieved, targetDate, targetWeight)
-VALUES
-    (false, '2024-05-01', 150),
-    (true, '2024-04-30', 155);
-
 -- Inserting PersonalInfo data
 INSERT INTO PersonalInfo (dateOfBirth, contactID, emergencyContactID)
 VALUES
@@ -79,7 +67,21 @@ VALUES
     ('456 Oak Ave, Townsville, USA', '2024-11-30', 87654321, '2025-12-01', 456);
 
 -- Inserting MemberInfo data
-INSERT INTO MemberInfo (personalInfoID, billingInfoID, statID, goalID)
+INSERT INTO MemberInfo (personalInfoID, billingInfoID)
 VALUES
-    (1, 1, 1, 1),
-    (2, 2, 2, 2);
+    (1, 1),
+    (2, 2);
+
+-- Inserting Statistic data
+INSERT INTO Statistic (memberid, "type", "value")
+VALUES
+    (1, 'weight', '100kg'),
+    (1, 'bench', '425lbs'),
+    (2, 'weight', '100kg'),
+    (2, 'bench', '100lbs');
+
+-- Inserting FitnessGoal data
+INSERT INTO FitnessGoal (memberID, type, description, isAchieved, targetDate)
+VALUES
+    (1, 'typeA', 'typADesc', true, '2024-05-01'),
+    (2, 'typeB',  'typeBDesc', false, '2024-04-30');
