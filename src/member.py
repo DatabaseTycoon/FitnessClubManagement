@@ -9,9 +9,6 @@ class Member:
         self.member_id = member_id
         self.db = db
 
-    def show_main_menu(self):
-        input("Member Menu " + str(self.member_id))
-
     @staticmethod
     def get_member_info(db: Database, member_id: int):
         sel_res = db.select(["*"], "memberinfo", select_options={
@@ -47,9 +44,6 @@ class Member:
         weight = input("Weight: ")
         target_date = get_date_input("Target Date (YYYY/MM/DD): ")
 
-        db.insert_into("fitnessgoal", [False, target_date, weight], ["isachieved", "targetdate", "targetweight"])
-        goal_id = get_last_id(db, "fitnessgoal", "goalid")
-
         mem_end_date = datetime.today() + timedelta(days=30)
         db.insert_into("billinginfo", [address, mem_end_date, cc_number, cc_expiration, cc_sec_code],
                        ["billingaddress", "memenddate", "creditcardnumber", "creditcardexpirydate",
@@ -68,8 +62,11 @@ class Member:
                        ["dateofbirth", "contactid", "emergencycontactid"])
         personal_info_id = get_last_id(db, "personalinfo", "personalinfoid")
 
-        db.insert_into("memberinfo", [personal_info_id, billing_info_id, goal_id],
-                       ["personalinfoid", "billinginfoid", "goalid"])
+        db.insert_into("memberinfo", [personal_info_id, billing_info_id],
+                       ["personalinfoid", "billinginfoid"])
+
+        # db.insert_into("fitnessgoal", [False, target_date, weight], ["isachieved", "targetdate", "targetweight"])
+        # goal_id = get_last_id(db, "fitnessgoal", "goalid")
 
         print("\n\nRegistration Successful")
         time.sleep(2)
@@ -154,6 +151,48 @@ class Member:
             elif option == 4:
                 return
 
+    def display_dashboard(self):
+        print("\n Dashboard")
+
+    def register_for_class(self):
+        print("\n" * 40)
+        print("\t\tCLASS REGISTRATION")
+
+        classes = self.db.select(['classid', 'roomid', 'startdate', 'enddate', 'capacity'], 'gymclass', select_options={
+            "WHERE": {"operation": ">", "rowA": "startdate", "rowB": datetime.today().strftime("%Y/%m/%d")}
+        })
+        classes = [c for c in classes if not self._is_class_available_for_registration(c, self.member_id)]
+
+        if len(classes) == 0:
+            print("\nNo classes are available for registration at this time!")
+            time.sleep(2)
+            return
+
+        print("\n\t\tAVAILABLE CLASSES\n")
+        print("{:<10} {:<10} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in classes:
+            print("{:<10} {:<10} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
+        classIDs = [c[0] for c in classes]
+        classId = get_int_input("\nEnter the class ID register: ")
+        while not classId in classIDs:
+            print("Invalid class id!")
+            classId = get_int_input("Enter a valid class ID register: ")
+
+        self.db.insert_into("participates", [classId, self.member_id], ["classid", "memberid"])
+
+        print("\nSuccessfully registered for class")
+        time.sleep(2)
+
+    def _is_class_available_for_registration(self, cls, memberid):
+        class_id, room_id, start_date, end_date, capacity = cls
+        participants = self.db.select(['memberid'], 'participates', select_options={
+            "WHERE": {"operation": "=", "rowA": "classid", "rowB": str(class_id)}
+        })
+        return len(participants) < int(capacity) and any(p[0] == memberid for p in participants)
 
     def show_main_menu(self):
         while True:
@@ -166,6 +205,6 @@ class Member:
             elif selected_option == 1:
                 self.display_dashboard()
             elif selected_option == 2:
-                print("Selected: Register For Class")
+                self.register_for_class()
             elif selected_option == 3:
                 return

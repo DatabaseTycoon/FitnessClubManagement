@@ -101,3 +101,9 @@ CREATE TABLE FitnessGoal (
 	targetDate date NOT NULL,
 	PRIMARY KEY (memberID, type)
 );
+
+CREATE TABLE Participates (
+    memberID int REFERENCES MemberInfo (memberInfo),
+    classID int REFERENCES GymClass (classID),
+	PRIMARY KEY (memberID, classID)
+);
