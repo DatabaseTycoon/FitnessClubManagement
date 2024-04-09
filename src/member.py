@@ -1,3 +1,5 @@
+import psycopg.errors
+
 from helpers import *
 from db_api.database import Database
 from datetime import datetime, timedelta
@@ -40,10 +42,6 @@ class Member:
         cc_expiration = get_date_input("Credit Card Expiration Date (YYYY/MM): ", "%Y/%m")
         cc_sec_code = input("Credit Card SecurityCode: ")
 
-        print("\n - Goals -")
-        weight = input("Weight: ")
-        target_date = get_date_input("Target Date (YYYY/MM/DD): ")
-
         mem_end_date = datetime.today() + timedelta(days=30)
         db.insert_into("billinginfo", [address, mem_end_date, cc_number, cc_expiration, cc_sec_code],
                        ["billingaddress", "memenddate", "creditcardnumber", "creditcardexpirydate",
@@ -65,15 +63,12 @@ class Member:
         db.insert_into("memberinfo", [personal_info_id, billing_info_id],
                        ["personalinfoid", "billinginfoid"])
 
-        # db.insert_into("fitnessgoal", [False, target_date, weight], ["isachieved", "targetdate", "targetweight"])
-        # goal_id = get_last_id(db, "fitnessgoal", "goalid")
-
         print("\n\nRegistration Successful")
         time.sleep(2)
 
     def update_member_info(self):
-        personal_info_id, billing_info_id, goal_id = \
-            self.db.select(['personalinfoid', 'billinginfoid', 'goalid'], 'memberinfo', select_options={
+        personal_info_id, billing_info_id = \
+            self.db.select(['personalinfoid', 'billinginfoid'], 'memberinfo', select_options={
                 "WHERE": {"operation": "=", "rowA": "memberinfo", "rowB": str(self.member_id)}
             })[0]
 
@@ -155,11 +150,35 @@ class Member:
         print("\n" * 40)
         print("\t\t\tMEMBER DASHBOARD\n")
 
+        self._show_personal_information()
         self._show_upcoming_classes()
         self._show_statistics()
         self._show_fitness_goals()
 
         input("\n\n\nPress any key to go back to the main menu...")
+
+    def _show_personal_information(self):
+        personal_info_id = self.db.select(['personalinfoid'], 'memberinfo', select_options={
+            "WHERE": {"operation": "=", "rowA": "memberinfo", "rowB": str(self.member_id)}
+        })[0][0]
+
+        contact_id, dob = self.db.select(['contactid', 'dateofbirth'], 'personalinfo', select_options={
+            "WHERE": {"operation": "=", "rowA": "personalinfoid", "rowB": str(personal_info_id)}
+        })[0]
+
+        first_name, last_name, email, phone_number = \
+            self.db.select(['firstname', 'lastname', 'email', 'phonenumber'], 'contactinfo', select_options={
+                "WHERE": {"operation": "=", "rowA": "contactid", "rowB": str(contact_id)}
+            })[0]
+
+        print("\n\tPERSONAL INFORMATION\n")
+
+        print("{:<20} {:<30}".format("First Name: ", first_name))
+        print("{:<20} {:<30}".format("Last Name: ", last_name))
+        print("{:<20} {:<30}".format("Email: ", email))
+        print("{:<20} {:<30}".format("Phone Number: ", phone_number))
+        print("{:<20} {:<30}".format("Date of Birth: ", dob.strftime("%d %b, %Y")))
+
 
     def _show_statistics(self):
         print("\n" * 2)
@@ -177,7 +196,7 @@ class Member:
             print("   You don't have any statistics")
 
     def _show_fitness_goals(self):
-        print("\n"*2)
+        print("\n" * 2)
         print("\tFITNESS GOALS\n")
         goals = self.db.select(['type', 'description', 'isachieved', 'targetdate'], 'fitnessgoal', select_options={
             "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
@@ -209,8 +228,8 @@ class Member:
         else:
             print("   You don't have any achieved fitness goals")
 
-
     def _show_upcoming_classes(self):
+        print("\n" * 2)
         print("\n\tUPCOMING CLASSES\n")
         classIDs = self.db.select(['classid'], 'participates', select_options={
             "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
@@ -268,10 +287,78 @@ class Member:
         print("\nSuccessfully registered for class")
         time.sleep(2)
 
+    def add_statistics(self):
+        while True:
+            print("\n" * 40)
+            print("\tADD NEW STATISTICS\n")
+
+            print("Enter new statistics details:")
+            type = input("Type: ")
+
+            stats = self.db.select(['type', 'value'], 'statistic', select_options={
+                "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+            })
+            types = [s[0] for s in stats]
+
+            if type in types:
+                print("\nYou already have a statistics with the same type.")
+                option = get_option_input(["Add a different statistics", "Back"])
+                if option == 0:
+                    continue
+                else:
+                    break
+
+            value = input("Value: ")
+
+            self.db.insert_into("statistic", [self.member_id, type, value], ["memberid", "type", "value"])
+
+            print("\nStatistics successfully added!")
+            time.sleep(2)
+            break
+
+    def add_goal(self):
+        while True:
+            print("\n" * 40)
+            print("\tADD NEW FITNESS GOAL\n")
+
+            print("Enter new goal details:")
+            type = input("Type: ")
+
+            types = self.db.select(['type'], 'fitnessgoal', select_options={
+                "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+            })
+            types = [t[0] for t in types]
+
+            if type in types:
+                print("\nYou already have a goal with the same type.")
+                option = get_option_input(["Add a different goal", "Back"])
+                if option == 0:
+                    continue
+                else:
+                    break
+
+            description = input("Description: ")
+            target_date = get_date_input("Target Date (YYYY/MM/DD): ")
+
+            self.db.insert_into("fitnessgoal", [self.member_id, type, description, False, target_date],
+                                ["memberid", "type", "description", "isachieved", "targetdate"])
+
+            print("\nGoal successfully added!")
+            time.sleep(2)
+            break
+
+    def _is_class_available_for_registration(self, cls, memberid):
+        class_id, room_id, start_date, end_date, capacity = cls
+        participants = self.db.select(['memberid'], 'participates', select_options={
+            "WHERE": {"operation": "=", "rowA": "classid", "rowB": str(class_id)}
+        })
+        return len(participants) < int(capacity) and not any(p[0] == memberid for p in participants)
+
     def show_main_menu(self):
         while True:
             print("\n" * 50)
-            main_menu_options = ["Update User Info", "Display Dashboard", "Register For Class", "Back"]
+            main_menu_options = ["Update User Info", "Display Dashboard", "Register For Class", "Add Statistics",
+                                 "Add Fitness Goal", "Back"]
             selected_option = get_option_input(main_menu_options, "Member Menu", 2)
 
             if selected_option == 0:
@@ -281,11 +368,8 @@ class Member:
             elif selected_option == 2:
                 self.register_for_class()
             elif selected_option == 3:
+                self.add_statistics()
+            elif selected_option == 4:
+                self.add_goal()
+            elif selected_option == 5:
                 return
-
-    def _is_class_available_for_registration(self, cls, memberid):
-        class_id, room_id, start_date, end_date, capacity = cls
-        participants = self.db.select(['memberid'], 'participates', select_options={
-            "WHERE": {"operation": "=", "rowA": "classid", "rowB": str(class_id)}
-        })
-        return len(participants) < int(capacity) and not any(p[0] == memberid for p in participants)
