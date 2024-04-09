@@ -47,7 +47,7 @@ def get_date_input(prompt=" > ", format="%Y/%m/%d"):
         dob = input(prompt)
         try:
             date = datetime.strptime(dob, format)
-            return date
+            return date.strftime("%Y-%m-%d")
         except ValueError:
             print("Incorrect date format. Please try again.")
 
