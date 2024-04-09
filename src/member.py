@@ -179,7 +179,6 @@ class Member:
         print("{:<20} {:<30}".format("Phone Number: ", phone_number))
         print("{:<20} {:<30}".format("Date of Birth: ", dob.strftime("%d %b, %Y")))
 
-
     def _show_statistics(self):
         print("\n" * 2)
         print("\tSTATISTICS\n")
@@ -316,10 +315,73 @@ class Member:
             time.sleep(2)
             break
 
-    def add_goal(self):
+    def manage_fitness_goals(self):
+        print("\n" * 40)
+        print("\tMANAGE FITNESS GOALS\n")
+
+        option = get_option_input(["Add a new goal goal", "Set Goal As Achieved", "Back"])
+        if option == 0:
+            self._add_fitness_goal()
+        elif option == 1:
+            self._set_goal_as_achieved()
+        elif option == 2:
+            return
+
+    def _set_goal_as_achieved(self):
+        print("\n" * 40)
+        goals = self.db.select(['type', 'description', 'isachieved', 'targetdate'], 'fitnessgoal', select_options={
+            "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+        })
+
+        current_goals = []
+        types = []
+        for goal in goals:
+            if not goal[2]:
+                current_goals.append(goal)
+                types.append(goal[0])
+
+        print("Fitness Goals:\n")
+        if len(current_goals) > 0:
+            print("{:<15} {:<30} {:<15}".format("Type", "Description", "Target Date"))
+            for goal in current_goals:
+                print("{:<15} {:<30} {:<15}".format(goal[0], goal[1], str(goal[3].strftime("%Y/%m/%d"))))
+
+            type_to_update = input("\nEnter the type of the fitness goal you achieved: ")
+            while not type_to_update in types:
+                print("Invalid type!")
+                type_to_update = input("Enter the type of the fitness goal you achieved: ")
+
+            upd_res = self.db.update("fitnessgoal", [("isachieved", str(1))],
+                                     {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)},
+                                     {"operation": "=", "rowA": "type", "rowB": str(type_to_update)})
+
+            stats = self.db.select(['type', 'value'], 'statistic', select_options={
+                "WHERE": {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)}
+            })
+            stats_types = [s[0] for s in stats]
+
+            # Updating the statistic table with the new archived goal
+            if type_to_update in stats_types:
+                goal = list(filter(lambda g: g[0] == type_to_update, current_goals))[0]
+
+                upd_res = self.db.update("statistic", [("value", goal[1])],
+                                         {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)},
+                                         {"operation": "=", "rowA": "type", "rowB": str(type_to_update)})
+            else:
+                self.db.insert_into("statistic", [self.member_id, type_to_update, goal[1]], ["memberid", "type", "value"])
+
+            print("Congratulations! Updated your goal as Achieved.")
+            time.sleep(2)
+
+        else:
+            print("   You don't have any fitness goals to achieve")
+            time.sleep(2)
+
+
+    def _add_fitness_goal(self):
         while True:
             print("\n" * 40)
-            print("\tADD NEW FITNESS GOAL\n")
+            print("\tAdd New Fitness Goal\n")
 
             print("Enter new goal details:")
             type = input("Type: ")
@@ -358,7 +420,7 @@ class Member:
         while True:
             print("\n" * 50)
             main_menu_options = ["Update User Info", "Display Dashboard", "Register For Class", "Add Statistics",
-                                 "Add Fitness Goal", "Back"]
+                                 "Manage Fitness Goals", "Back"]
             selected_option = get_option_input(main_menu_options, "Member Menu", 2)
 
             if selected_option == 0:
@@ -370,6 +432,6 @@ class Member:
             elif selected_option == 3:
                 self.add_statistics()
             elif selected_option == 4:
-                self.add_goal()
+                self.manage_fitness_goals()
             elif selected_option == 5:
                 return
