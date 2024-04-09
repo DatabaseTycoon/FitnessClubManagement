@@ -54,7 +54,7 @@ class Trainer:
 
         # reselect specific member (get first id match, in theory only one):
         g_info = self.db.select_with_or(['*'], 'fitnessgoal',
-                                {'operation': '=', 'rowA': 'memberid', 'rowB': str(_id)})
+                                        {'operation': '=', 'rowA': 'memberid', 'rowB': str(_id)})
 
         member_pinfo = list(filter(lambda personal: personal[0] == member[1], p_info))[0]
         member_contact = list(filter(lambda contact: contact[0] == member_pinfo[1], c_info))[0]
@@ -70,14 +70,13 @@ class Trainer:
 
             print("{:<10} {:<20} {:<20} {:<10}".format(type_, desc, acheived, target))
 
-
         input("\nPress enter to continue > ")
 
     def teach_class(self):
         # Step 1: Show teacherless classes
         runs = self.db.select(['classid'], 'runs', {})
         ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
-        classes = self.db.select(["*"], 'gymclass',{})
+        classes = self.db.select(["*"], 'gymclass', {})
         non_ran_classes = [cls for cls in classes if cls[0] not in ran_classes_ids]
 
         print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
@@ -102,4 +101,22 @@ class Trainer:
         time.sleep(2)
 
     def see_ran_classes(self):
-        pass
+        # Get ran classes
+        runs = self.db.select(['classid'], 'runs', {"WHERE":
+                                                        {"operation": "=", "rowA": str(self.trainer_id),
+                                                         "rowB": "trainerid"}})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+        classes = self.db.select(["*"], 'gymclass', {})
+        ran_classes = [cls for cls in classes if cls[0] in ran_classes_ids]
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\n\t\tASSIGNED CLASSES\n")
+        print("{:<30} {:<15} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in ran_classes:
+            print("{:<30} {:<15} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
+
+        input("\nPress enter to continue > ")
