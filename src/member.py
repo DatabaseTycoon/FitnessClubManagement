@@ -1,5 +1,3 @@
-import psycopg.errors
-
 from helpers import *
 from db_api.database import Database
 from datetime import datetime, timedelta
@@ -368,7 +366,8 @@ class Member:
                                          {"operation": "=", "rowA": "memberid", "rowB": str(self.member_id)},
                                          {"operation": "=", "rowA": "type", "rowB": str(type_to_update)})
             else:
-                self.db.insert_into("statistic", [self.member_id, type_to_update, goal[1]], ["memberid", "type", "value"])
+                self.db.insert_into("statistic", [self.member_id, type_to_update, goal[1]],
+                                    ["memberid", "type", "value"])
 
             print("Congratulations! Updated your goal as Achieved.")
             time.sleep(2)
@@ -376,7 +375,6 @@ class Member:
         else:
             print("   You don't have any fitness goals to achieve")
             time.sleep(2)
-
 
     def _add_fitness_goal(self):
         while True:
