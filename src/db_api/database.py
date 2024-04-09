@@ -125,18 +125,13 @@ class Database():
         return sql.SQL((sql.SQL(f"INSERT INTO {{table}}") + rows + sql.SQL(f" VALUES ({{values}})")).as_string(self.__connection))
 
 
-    def __form_update_querry(self, where_helper: _WhereHelper, udpate_row_helper: _UpdateRowHelper):
-
-        if where_helper.has_where:
-            where = f"WHERE {{where_rowA}} {where_helper.op} {{where_rowB}} "
-        else:
-            where = ""
+    def __form_update_querry(self, udpate_row_helper: _UpdateRowHelper):
         
         rows_string = sql.SQL(", ").join(
             [ udpate_row_helper.prevRows[x] + sql.SQL(" = ") + udpate_row_helper.newRows[x] for x in range(udpate_row_helper.length)]
         ).as_string(self.__connection)
 
-        return sql.SQL(f"UPDATE {{table}} SET {rows_string} {where}")
+        return sql.SQL(f"UPDATE {{table}} SET {rows_string} ")
 
         
 
@@ -373,13 +368,13 @@ class Database():
         self.__add_cache(tbl)
     
 
-    def update(self, tbl: str, updated_rows:'list[tuple[str]]', where:dict={'operation': "", "rowA": "", "rowB": ""}):
+    def update(self, tbl: str, updated_rows:'list[tuple[str]]', *anded_wheres):
         """Updates a table in the database
 
         Args:
             tbl (str): The target table
             updated_rows (list[tuple[str]]): The rows and their updates. DOES NOT SUPPORT OPERATIONS. For example: `[("rowA", "3"), ("rowB", "123 Street")]`
-            where (_type_, optional): The where clause of the querry if it exists. Defaults to {'operation': "", "rowA": "", "rowB": ""}.
+            anded_wheres (dict, optional): The where clauses of the querry if it exists the clauses will joined with an AND. Can be NONE
         """
 
         if type(updated_rows) != list:
@@ -389,20 +384,39 @@ class Database():
         elif not [True for tpl in updated_rows if type(tpl) == tuple and len(tpl) == 2]:
             raise TypeError(f"{updated_rows}: tuples inside are malformed")
         
+        if not anded_wheres:
+            anded_wheres = []
+        
         # Update Cache
         if tbl not in self.__row_cache:
             self.__add_cache(tbl)
         
-        w_helper = _WhereHelper(bool(where), self.__row_cache[tbl], where["operation"], where["rowA"], where["rowB"])
-        update_row_helper = _UpdateRowHelper(self.__row_cache[tbl], updated_rows)
-
-        querry = self.__form_update_querry(w_helper, update_row_helper)
+        helped_conditions = [_WhereHelper(True, self.__row_cache[tbl], cond["operation"], cond["rowA"], cond["rowB"]) 
+                for cond in anded_wheres]
         
+        # Not ANDed
+        update_row_helper = _UpdateRowHelper(self.__row_cache[tbl], updated_rows)
+        querry = self.__form_update_querry(update_row_helper)
+
         querry = querry.format(
-            table           =   sql.Identifier(tbl),
-            where_rowA      =   sql.Literal(where["rowA"]) if w_helper.is_row_A_Literal else sql.Identifier(where["rowA"]),
-            where_rowB      =   sql.Literal(where["rowB"]) if w_helper.is_row_B_Literal else sql.Identifier(where["rowB"]),
-        )
+            table = sql.Identifier(tbl)
+        ).as_string(self.__connection)
+
+        if anded_wheres:
+            querry += "WHERE "
+
+        # ANDed
+        for x in range(len(helped_conditions)):
+            cond_help = helped_conditions[x]
+            cond_obj = anded_wheres[x]
+            OR_statement = "AND " if x != 0 else ""
+            querry += f"{OR_statement}{{}} {cond_obj["operation"]} {{}} "
+            querry = sql.SQL(querry).format(
+                sql.Literal(cond_obj["rowA"]) if cond_help.is_row_A_Literal else sql.Identifier(cond_obj["rowA"]), 
+                sql.Literal(cond_obj["rowB"]) if cond_help.is_row_B_Literal else sql.Identifier(cond_obj["rowB"])
+            ).as_string(self.__connection)
+
+        querry = sql.SQL(querry)
 
         with self.__connection.cursor() as cursor:
             cursor.execute(querry)
