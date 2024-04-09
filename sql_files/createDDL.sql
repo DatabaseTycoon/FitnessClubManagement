@@ -53,14 +53,6 @@ CREATE TABLE GymClass (
 	capacity int
 );
 
-
-CREATE TABLE Runs (
-	trainerID int REFERENCES Trainer (trainerID),
-	classID int REFERENCES GymClass (classID),
-	PRIMARY KEY (trainerID, classID)
-);
-
-
 CREATE TABLE PersonalInfo (
 	personalInfoID serial PRIMARY KEY,
     dateOfBirth date,
@@ -82,6 +74,22 @@ CREATE TABLE MemberInfo(
 	memberInfo serial PRIMARY KEY,
 	personalInfoID int REFERENCES PersonalInfo (personalInfoID),
 	billingInfoID int REFERENCES BillingInfo (billingInfoID)
+);
+
+CREATE TABLE Runs (
+	trainerID int,
+	classID int,
+	PRIMARY KEY (trainerID, classID),
+    FOREIGN KEY (classID) REFERENCES GymClass ON DELETE CASCADE,
+    FOREIGN KEY (trainerID) REFERENCES Trainer ON DELETE CASCADE
+);
+
+CREATE TABLE Participates (
+	memberID int,
+	classID int,
+	PRIMARY KEY (memberID, classID),
+    FOREIGN KEY (classID) REFERENCES GymClass ON DELETE CASCADE,
+    FOREIGN KEY (memberID) REFERENCES MemberInfo ON DELETE CASCADE
 );
 
 -- Should statistic be "value", and "type" where type is a string element of {HeartRate, BloodPressure, Weight, Height}?

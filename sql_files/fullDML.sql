@@ -49,11 +49,6 @@ VALUES
     (1, '2024-04-10 10:00:00', '2024-04-10 11:00:00', 10),
     (1, '2024-04-12 12:00:00', '2024-04-12 13:00:00', 15);
 
--- Inserting Runs data
-INSERT INTO Runs (trainerID, classID)
-VALUES (1, 1),
-       (2, 2);
-
 -- Inserting PersonalInfo data
 INSERT INTO PersonalInfo (dateOfBirth, contactID, emergencyContactID)
 VALUES
@@ -85,3 +80,14 @@ INSERT INTO FitnessGoal (memberID, type, description, isAchieved, targetDate)
 VALUES
     (1, 'typeA', 'typADesc', true, '2024-05-01'),
     (2, 'typeB',  'typeBDesc', false, '2024-04-30');
+
+
+-- Inserting Runs data
+INSERT INTO Runs (trainerID, classID)
+VALUES (1, 1),
+       (2, 2);
+
+-- Inserting Runs data
+INSERT INTO Participates (memberID, classID)
+VALUES (1, 1),
+       (2, 2);

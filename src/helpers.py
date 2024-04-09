@@ -33,7 +33,7 @@ def get_int_input(prompt=" > ", min: int = None, max: int = None):
         try:
             user_input = int(input(prompt))
             if (min is not None and user_input < min) or (max is not None and user_input > user_input > max):
-                print(" Please enter a valid input.")
+                print(" Please enter a valid input. (Between {} and {})".format(min, max))
                 continue
             break
         except ValueError:

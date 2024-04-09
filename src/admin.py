@@ -25,7 +25,7 @@ class Admin:
                 end_time = get_datetime_input(" > Please enter an end time for the class")
                 equipment_name_in = input("> Please enter a comma seperated list of required equipment for the class "
                                           "(leave empty if N/A): ")
-                equipment_names = [name.strip() for name in equipment_name_in.split(",")]
+                equipment_names = [name.strip() for name in equipment_name_in.split(",") if name] # Ignore empty strings
                 self.book_class(capacity, start_time, end_time, equipment_names)
             elif selected_option == 2:
                 print("Selected: Cancel class")
@@ -192,6 +192,7 @@ class Admin:
         STATUS_I = 2
         ROOM_INDEX = 1
         all_equipment = get_all(self.db, 'equipment')
+
         equipment_rooms = set()
         for equipment in all_equipment:
             # If there exists a name in the given list which matches the current equipment name,
