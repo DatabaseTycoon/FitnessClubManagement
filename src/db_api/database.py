@@ -409,8 +409,8 @@ class Database():
         for x in range(len(helped_conditions)):
             cond_help = helped_conditions[x]
             cond_obj = anded_wheres[x]
-            OR_statement = "AND " if x != 0 else ""
-            querry += f"{OR_statement}{{}} {cond_obj["operation"]} {{}} "
+            AND_statement = "AND " if x != 0 else ""
+            querry += f'{AND_statement}{{}} {cond_obj['operation']} {{}} '
             querry = sql.SQL(querry).format(
                 sql.Literal(cond_obj["rowA"]) if cond_help.is_row_A_Literal else sql.Identifier(cond_obj["rowA"]), 
                 sql.Literal(cond_obj["rowB"]) if cond_help.is_row_B_Literal else sql.Identifier(cond_obj["rowB"])
