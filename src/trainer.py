@@ -27,7 +27,7 @@ class Trainer:
                 self.see_ran_classes()
             elif selected_option == 3:
                 print("Selected: Cancel teaching")
-                self.teach_class()
+                self.drop_ran_class()
             elif selected_option == 4:
                 return
 
@@ -93,7 +93,10 @@ class Trainer:
         class_id = None
         class_ids = [cls[0] for cls in non_ran_classes]
         while class_id not in class_ids:
-            class_id = int(input(" select class id to teach > "))
+            class_id_str = input(" select class id to teach (B to cancel) > ")
+            if class_id_str == "B":
+                return
+            class_id = int(class_id_str) if class_id_str.isnumeric() else class_id_str
 
         # Step 3: Create runs relation
         self.db.insert_into('runs', [str(self.trainer_id), str(class_id)], ['trainerid', 'classid'])
@@ -120,3 +123,22 @@ class Trainer:
                                                               cls[4]))
 
         input("\nPress enter to continue > ")
+
+
+
+    def drop_ran_class(self):
+        # Step 1: Get ran classes
+        runs = self.db.select(['classid'], 'runs', {"WHERE":
+                                                        {"operation": "=", "rowA": str(self.trainer_id),
+                                                         "rowB": "trainerid"}})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        # Step 2: select a class to drop
+        class_id = None
+        while class_id not in ran_classes_ids:
+            class_id = int(input("Select class id to stop teaching > "))
+
+        self.db.delete_from('runs', {"operation": "=", "rowA": "classid", "rowB": str(class_id)})
+        print("\n Trainer canceled teaching class ID: ", class_id)
+        time.sleep(2)
