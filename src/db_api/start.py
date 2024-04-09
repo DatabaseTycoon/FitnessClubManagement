@@ -29,7 +29,9 @@ def main(db: Database):
                                    {"operation": ">=", "rowA": "id", "rowB": "3"},
                                    {"operation": "=", "rowA": "id", "rowB": "4"})
     
-    upd_res = db.update("test_table", [("name", "henry"), ("house", "there")], {"operation": "=", "rowA": "name", "rowB": "Hello5"})
+    upd_res = db.update("test_table", [("name", "henry"), ("house", "there")], 
+                        {"operation": "=", "rowA": "name", "rowB": "Hello5"},
+                        {"operation": ">=", "rowA": "id", "rowB": "6"})
 
     print(sel_res, sel_res_or, del_res, ins_res, upd_res)
     exit(0)
