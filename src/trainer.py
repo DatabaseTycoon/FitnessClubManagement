@@ -13,15 +13,22 @@ class Trainer:
     def show_main_menu(self):
         while True:
             print("\n" * 50)
-            main_menu_options = ["View Member Profile", "Sets Available Times", "Back"]
-            selected_option = get_option_input(main_menu_options, "Trainer Menu", 2)
+            main_menu_options = ["View Member Profile", "Schedule teaching", "View Schedule", "Cancel teaching", "Back"]
+            selected_option = get_option_input(main_menu_options, "Trainer Menu", 3)
 
             if selected_option == 0:
                 print("Selected: View Member Profile")
                 self.view_profile()
             elif selected_option == 1:
-                print("Selected: Sets Available Times")
+                print("Selected: Schedule teaching")
+                self.teach_class()
             elif selected_option == 2:
+                print("Selected: View Schedule")
+                self.see_ran_classes()
+            elif selected_option == 3:
+                print("Selected: Cancel teaching")
+                self.drop_ran_class()
+            elif selected_option == 4:
                 return
 
     def view_profile(self) -> None:
@@ -47,7 +54,7 @@ class Trainer:
 
         # reselect specific member (get first id match, in theory only one):
         g_info = self.db.select_with_or(['*'], 'fitnessgoal',
-                                {'operation': '=', 'rowA': 'memberid', 'rowB': str(_id)})
+                                        {'operation': '=', 'rowA': 'memberid', 'rowB': str(_id)})
 
         member_pinfo = list(filter(lambda personal: personal[0] == member[1], p_info))[0]
         member_contact = list(filter(lambda contact: contact[0] == member_pinfo[1], c_info))[0]
@@ -63,5 +70,75 @@ class Trainer:
 
             print("{:<10} {:<20} {:<20} {:<10}".format(type_, desc, acheived, target))
 
+        input("\nPress enter to continue > ")
+
+    def teach_class(self):
+        # Step 1: Show teacherless classes
+        runs = self.db.select(['classid'], 'runs', {})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+        classes = self.db.select(["*"], 'gymclass', {})
+        non_ran_classes = [cls for cls in classes if cls[0] not in ran_classes_ids]
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\n\t\tCLASS LIST (unassigned only)\n")
+        print("{:<30} {:<15} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in non_ran_classes:
+            print("{:<30} {:<15} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
+
+        # Step 2: select a class
+        class_id = None
+        class_ids = [cls[0] for cls in non_ran_classes]
+        while class_id not in class_ids:
+            class_id_str = input(" select class id to teach (B to cancel) > ")
+            if class_id_str == "B":
+                return
+            class_id = int(class_id_str) if class_id_str.isnumeric() else class_id_str
+
+        # Step 3: Create runs relation
+        self.db.insert_into('runs', [str(self.trainer_id), str(class_id)], ['trainerid', 'classid'])
+        print("\n Trainer now teaches class ID: ", class_id)
+        time.sleep(2)
+
+    def see_ran_classes(self):
+        # Get ran classes
+        runs = self.db.select(['classid'], 'runs', {"WHERE":
+                                                        {"operation": "=", "rowA": str(self.trainer_id),
+                                                         "rowB": "trainerid"}})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+        classes = self.db.select(["*"], 'gymclass', {})
+        ran_classes = [cls for cls in classes if cls[0] in ran_classes_ids]
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\n\t\tASSIGNED CLASSES\n")
+        print("{:<30} {:<15} {:<15} {:<15} {:<10}".format("ClassID", "roomID", "Start time", "End time", "Capacity"))
+        for cls in ran_classes:
+            print("{:<30} {:<15} {:<15} {:<15} {:<10}".format(cls[0],
+                                                              cls[1],
+                                                              str(cls[2].strftime("%Y/%m/%d/%H")),
+                                                              str(cls[3].strftime("%Y/%m/%d/%H")),
+                                                              cls[4]))
 
         input("\nPress enter to continue > ")
+
+
+
+    def drop_ran_class(self):
+        # Step 1: Get ran classes
+        runs = self.db.select(['classid'], 'runs', {"WHERE":
+                                                        {"operation": "=", "rowA": str(self.trainer_id),
+                                                         "rowB": "trainerid"}})
+        ran_classes_ids = [run[0] for run in runs]  # unpack tuple as str
+
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        # Step 2: select a class to drop
+        class_id = None
+        while class_id not in ran_classes_ids:
+            class_id = int(input("Select class id to stop teaching > "))
+
+        self.db.delete_from('runs', {"operation": "=", "rowA": "classid", "rowB": str(class_id)})
+        print("\n Trainer canceled teaching class ID: ", class_id)
+        time.sleep(2)
