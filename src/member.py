@@ -317,7 +317,7 @@ class Member:
         print("\n" * 40)
         print("\tMANAGE FITNESS GOALS\n")
 
-        option = get_option_input(["Add a new goal goal", "Set Goal As Achieved", "Back"])
+        option = get_option_input(["Add a new fitness goal", "Set Goal As Achieved", "Back"])
         if option == 0:
             self._add_fitness_goal()
         elif option == 1:
